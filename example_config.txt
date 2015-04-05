@@ -1,0 +1,23 @@
+%% Determine our Erlang node name.
+[Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
+Node = erlang:list_to_atom(Node1),
+
+NodeCfg = case Node of
+            a -> #{port => 8080, remote_port => 8081, name => a};
+            b -> #{port => 8081, remote_port => 8080, name => b}
+          end,
+
+{Symm, SymmExpected} = ds_symm:setup(Node, 100000, 0.01, 100),
+
+#{
+   node => NodeCfg,
+
+   bloom_false_probability => 0.5,
+
+   datasets => #{
+     mini => ds_mini:setup(Node),
+     symm => Symm
+    },
+
+   symm_expected => SymmExpected
+}.

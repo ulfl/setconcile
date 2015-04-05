@@ -1,3 +1,4 @@
+%% Copyright (c) 2015 Ulf Leopold.
 -module(setconcile_app).
 -behaviour(application).
 
@@ -5,14 +6,22 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-  lager:info("Starting Setconcile."),
   Dispatch = cowboy_router:compile(
                [
                 {'_', [
-                       {"/", ping_handler, []}
+                       {"/api/ping", ping_handler, []},
+                       {"/api/datasets/:set/bloom", bloom_handler, []},
+                       {"/api/datasets/:set/transfers", transfers_handler, []},
+                       {"/api/datasets/:set", element_handler, []}
                       ]}
                ]),
-  {ok, _} = cowboy:start_http(http, 100, [{port, 8080}],
+
+  {ok, NodeCfg} = config:get(node),
+  Port = maps:get(port, NodeCfg),
+  lager:info("Starting Setconcile on port ~p", [Port]),
+
+  %% Start the web server.
+  {ok, _} = cowboy:start_http(http, 100, [{port, Port}],
                               [{env, [{dispatch, Dispatch}]}]).
 
 stop(_State) ->

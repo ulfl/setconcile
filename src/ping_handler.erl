@@ -1,3 +1,4 @@
+%% Copyright (c) 2015 Ulf Leopold.
 -module(ping_handler).
 
 -export([init/3]).
