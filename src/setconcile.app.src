@@ -1,0 +1,16 @@
+%%-*- mode: erlang -*-
+{application, setconcile,
+ [
+  {description, "Setconcile"},
+  {vsn, "1"},
+  {modules, []},
+  {registered, []},
+  {applications, [kernel,
+                  stdlib,
+                  ebloom,
+                  shotgun,
+                  cowboy
+                 ]},
+  {mod, {setconcile_app, []}},
+  {env, []}
+ ]}.
