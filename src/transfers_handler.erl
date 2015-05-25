@@ -22,7 +22,7 @@ serve(<<"POST">>, Req) ->
   lager:info("transfers handler: dataset=~p, peer=~p,", [DatasetName, Peer]),
   RemoteDataset = misc:remote_dataset(DatasetName),
   {N, Size} = dataset:post_transfer(LocalDataset, Bloom, RemoteDataset),
-  dataset_remote:stop(RemoteDataset),
+  dataset:stop(RemoteDataset),
   cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}],
                    term_to_binary({N, Size}), Req3);
 serve(_, Req) ->

@@ -3,12 +3,6 @@
 
 %% API.
 -export([start_link/3]).
--export([get_bloom/1]).
--export([post_transfer/3]).
--export([post_element/2]).
--export([get_all/1]).
--export([ping/1]).
--export([stop/1]).
 
 %% Gen server callbacks.
 -export([init/1]).
@@ -20,23 +14,6 @@
 
 start_link(Host, Port, DatasetName) ->
   gen_server:start_link(?MODULE, [Host, Port, DatasetName], []).
-
-get_bloom(Dataset) ->
-  {ok, Bloom} = gen_server:call(Dataset, get_bloom, infinity),
-  Bloom.
-
-post_transfer(Dataset, Bloom, Dest) ->
-  {ok, {Len, Size}} = gen_server:call(Dataset, {post_transfer, Bloom, Dest},
-                                      infinity),
-  {Len, Size}.
-
-post_element(Dataset, Element) ->
-  {ok, Size} = gen_server:call(Dataset, {post_element, Element}, infinity),
-  Size.
-
-ping(Dataset) -> gen_server:call(Dataset, ping, infinity).
-
-stop(Dataset) -> gen_server:call(Dataset, stop).
 
 %%%_* Gen server callbacks =============================================
 get_all(Dataset) ->

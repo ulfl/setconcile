@@ -15,7 +15,7 @@ setup(Node, N, P, B) ->
         a -> L1;
         b -> L2
       end,
-  {ok, Ds} = dataset:start_link(dict:from_list(L), fun get/1, fun put/2),
+  {ok, Ds} = dataset_local:start_link(dict:from_list(L), fun get/1, fun put/2),
   {Ds, Expected}.
 
 remote() ->

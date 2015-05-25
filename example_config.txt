@@ -3,10 +3,10 @@
 Node = erlang:list_to_atom(Node1),
 
 NodeCfg = case Node of
-            a -> #{port => 8080, remote_host => "127.0.01",
+            a -> #{port => 8080, remote_host => "127.0.0.1",
                    remote_port => 8081, name => a};
 
-            b -> #{port => 8081, remote_host => "127.0.01",
+            b -> #{port => 8081, remote_host => "127.0.0.1",
                    remote_port => 8080, name => b}
           end,
 
