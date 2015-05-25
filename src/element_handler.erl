@@ -13,13 +13,12 @@ handle(Req, State) ->
   {ok, Req2, State}.
 
 serve(<<"POST">>, Req) ->
-  {Dataset0, Req1} = cowboy_req:binding(set, Req),
-  Dataset = binary_to_existing_atom(Dataset0, utf8),
+  {DatasetName0, Req1} = cowboy_req:binding(set, Req),
+  DatasetName = binary_to_existing_atom(DatasetName0, utf8),
   {ok, Body, Req2} = cowboy_req:body(Req1),
-  D = misc:local_dataset(Dataset),
+  D = misc:local_dataset(DatasetName),
   E = binary_to_term(Body),
-  %lager:info("element_handler: received ~p", [E]),
-  D({post_element, E}),
+  dataset:post_element(D, E),
   cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2);
 serve(_, Req) ->
   cowboy_req:reply(405, Req).

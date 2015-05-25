@@ -13,14 +13,14 @@ handle(Req, State) ->
   {ok, Req2, State}.
 
 serve(<<"GET">>, Req) ->
-  {Dataset0, Req1} = cowboy_req:binding(set, Req),
-  Dataset = binary_to_existing_atom(Dataset0, utf8),
-  {R={Ip, _Port}, _Req3} = cowboy_req:peer(Req1),
-  lager:info("Bloom lookup. Dataset=~p, ~p", [Dataset, R]),
-  D = misc:local_dataset(Dataset),
-  B = D({get_bloom}),
+  {DatasetName0, Req1} = cowboy_req:binding(set, Req),
+  DatasetName = binary_to_existing_atom(DatasetName0, utf8),
+  {Peer={_Ip, _Port}, Req2} = cowboy_req:peer(Req1),
+  lager:info("bloom_handler: dataset=~p, peer=~p", [DatasetName, Peer]),
+  D = misc:local_dataset(DatasetName),
+  B = dataset:get_bloom(D),
   cowboy_req:reply(200, [{<<"content-type">>, <<"application/octet-stream">>}],
-                   ebloom:serialize(B), Req);
+                   ebloom:serialize(B), Req2);
 serve(_, Req) ->
   cowboy_req:reply(405, Req).
 

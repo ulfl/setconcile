@@ -3,11 +3,14 @@
 Node = erlang:list_to_atom(Node1),
 
 NodeCfg = case Node of
-            a -> #{port => 8080, remote_port => 8081, name => a};
-            b -> #{port => 8081, remote_port => 8080, name => b}
+            a -> #{port => 8080, remote_host => "127.0.01",
+                   remote_port => 8081, name => a};
+
+            b -> #{port => 8081, remote_host => "127.0.01",
+                   remote_port => 8080, name => b}
           end,
 
-{Symm, SymmExpected} = ds_symm:setup(Node, 100000, 0.01, 100),
+{Symm, SymmExpected} = ds_symm:setup(Node, 10000, 0.2, 100),
 
 #{
    node => NodeCfg,
@@ -19,5 +22,9 @@ NodeCfg = case Node of
      symm => Symm
     },
 
-   symm_expected => SymmExpected
+   symm_expected => SymmExpected,
+
+   tmo_get_bloom     => 1000 * 3600,
+   tmo_post_transfer => 1000 * 3600,
+   tmo_post_element  => 1000 * 10
 }.

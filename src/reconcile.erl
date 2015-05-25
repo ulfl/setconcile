@@ -12,15 +12,15 @@ reconcile(_, _, Its, MaxIts, _Converged, Size, BloomSize) when Its >= MaxIts ->
   {ok, Its, Size, BloomSize};
 reconcile(LocalDataset, RemoteDataset, Its, MaxIts, Converged, Size,
           BloomSize) ->
-  LocalBloom = LocalDataset({get_bloom}),
-  {ReceiveCount, ReceiveSize} = RemoteDataset({post_transfer, LocalBloom,
-                                               LocalDataset}),
+  LocalBloom = dataset:get_bloom(LocalDataset),
+  {ReceiveCount, ReceiveSize} = dataset:post_transfer(RemoteDataset,
+                                                      LocalBloom, LocalDataset),
   lager:info("Received from remote. num_elements=~p, total_size=~p bytes.~n",
              [ReceiveCount, ReceiveSize]),
 
-  RemoteBloom = RemoteDataset({get_bloom}),
-  {SendCount, SendSize} = LocalDataset({post_transfer, RemoteBloom,
-                                        RemoteDataset}),
+  RemoteBloom = dataset:get_bloom(RemoteDataset),
+  {SendCount, SendSize} = dataset:post_transfer(LocalDataset, RemoteBloom,
+                                                RemoteDataset),
   lager:info("Transferred to remote. num_elements=~p, total_size=~p bytes.~n",
              [SendCount, SendSize]),
 

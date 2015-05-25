@@ -18,12 +18,11 @@ serve(<<"POST">>, Req) ->
   {ok, Body, Req2} = cowboy_req:body(Req1),
   LocalDataset = misc:local_dataset(DatasetName),
   {ok, Bloom} = ebloom:deserialize(Body),
-  {{Ip, _Port}, Req3} = cowboy_req:peer(Req2),
-  lager:info("transfers handler: Request from src_ip=~p, bloom=~p",
-             [Ip, Bloom]),
+  {Peer={_Ip, _Port}, Req3} = cowboy_req:peer(Req2),
+  lager:info("transfers handler: dataset=~p, peer=~p,", [DatasetName, Peer]),
   RemoteDataset = misc:remote_dataset(DatasetName),
-  {N, Size} = LocalDataset({post_transfer, Bloom, RemoteDataset}),
-  RemoteDataset({exit}),
+  {N, Size} = dataset:post_transfer(LocalDataset, Bloom, RemoteDataset),
+  dataset_remote:stop(RemoteDataset),
   cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}],
                    term_to_binary({N, Size}), Req3);
 serve(_, Req) ->

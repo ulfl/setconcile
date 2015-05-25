@@ -15,13 +15,14 @@ setup(Node, N, P, B) ->
         a -> L1;
         b -> L2
       end,
-  {dataset:make(dict:from_list(L), fun get/1, fun put/2), Expected}.
+  {ok, Ds} = dataset:start_link(dict:from_list(L), fun get/1, fun put/2),
+  {Ds, Expected}.
 
 remote() ->
   {ok, Expected} = config:get(symm_expected),
   LocalDataset = misc:local_dataset(symm),
   RemoteDataset = misc:remote_dataset(symm),
-  DatasetSize = size(LocalDataset({get_all}), 0),
+  DatasetSize = size(dataset:get_all(LocalDataset), 0),
   {ok, Its, Size, BloomSize} = reconcile:reconcile(LocalDataset,
                                                        RemoteDataset, 30),
   lager:info("Done (its=~p, data_size=~.2f MB, bloom_size=~.2f MB)~n",
@@ -29,14 +30,14 @@ remote() ->
   lager:info("Size of local dataset (dataset_size=~.2fMB)~n", [mb(DatasetSize)]),
   lager:info("Ratio of transferred data to dataset size (size_ratio=~.2f)~n",
              [(Size + BloomSize) / DatasetSize]),
-  verify(LocalDataset({get_all}), Expected).
+  verify(dataset:get_all(LocalDataset), Expected).
 
 %%%_* Local test =======================================================
 local() ->
   {A, ExpectedA} = setup(a),
   {B, ExpectedB} = setup(b),
-  DatasetSizeA = size(A({get_all}), 0),
-  DatasetSizeB = size(B({get_all}), 0),
+  DatasetSizeA = size(dataset:get_all(A), 0),
+  DatasetSizeB = size(dataset:get_all(B), 0),
   {ok, Its, Size, BloomSize} = reconcile:reconcile(A, B, 30),
   lager:info("Done (its=~p, data_size=~.2f MB, bloom_size=~.2f MB)~n",
              [Its, mb(Size), mb(BloomSize)]),
@@ -44,8 +45,8 @@ local() ->
   lager:info("Size of dataset B: ~.2fMB~n", [mb(DatasetSizeB)]),
   lager:info("Ratio of transferred data to dataset A size (size_ratio=~.2f)~n",
              [(Size + BloomSize) / DatasetSizeA]),
-  verify(A({get_all}), ExpectedA),
-  verify(B({get_all}), ExpectedB).
+  verify(dataset:get_all(A), ExpectedA),
+  verify(dataset:get_all(B), ExpectedB).
 
 %%%_* Helpers ==========================================================
 get(State) -> dict:to_list(State).

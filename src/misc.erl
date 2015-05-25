@@ -12,5 +12,6 @@ remote_dataset(Dataset) ->
   {ok, NodeCfg} = config:get(node),
   Port = maps:get(remote_port, NodeCfg),
   Host = maps:get(remote_host, NodeCfg),
-  dataset_remote:make(Host, Port, Dataset).
+  {ok, Ds} = dataset_remote:start_link(Host, Port, Dataset),
+  Ds.
 

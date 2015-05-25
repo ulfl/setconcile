@@ -11,9 +11,8 @@
                   lager,
                   config,
                   ebloom,
-                  cowboy,
-                  shotgun,
-                  lhttpc
+                  lhttpc,
+                  cowboy
                  ]},
   {mod, {setconcile_app, []}},
   {env, []}
