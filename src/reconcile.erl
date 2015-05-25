@@ -12,17 +12,25 @@ reconcile(_, _, Its, MaxIts, _Converged, Size, BloomSize) when Its >= MaxIts ->
   {ok, Its, Size, BloomSize};
 reconcile(LocalDataset, RemoteDataset, Its, MaxIts, Converged, Size,
           BloomSize) ->
-  LocalBloom = dataset:get_bloom(LocalDataset),
-  {ReceiveCount, ReceiveSize} = dataset:post_transfer(RemoteDataset,
-                                                      LocalBloom, LocalDataset),
-  lager:info("Received from remote. num_elements=~p, total_size=~p bytes.~n",
-             [ReceiveCount, ReceiveSize]),
+  {Dt1, LocalBloom} = timer:tc(fun() -> dataset:get_bloom(LocalDataset) end),
+  lager:info("Calculated local bloom (dt=~.2fs).", [s(Dt1)]),
 
-  RemoteBloom = dataset:get_bloom(RemoteDataset),
-  {SendCount, SendSize} = dataset:post_transfer(LocalDataset, RemoteBloom,
-                                                RemoteDataset),
-  lager:info("Transferred to remote. num_elements=~p, total_size=~p bytes.~n",
-             [SendCount, SendSize]),
+  {Dt2, {ReceiveCount, ReceiveSize}} =
+    timer:tc(fun() -> dataset:post_transfer(RemoteDataset, LocalBloom,
+                                            LocalDataset)
+             end),
+  lager:info("Received from remote (num_elements=~p, total_size=~pB, "
+             "dt=~.2fs)~n", [ReceiveCount, ReceiveSize, s(Dt2)]),
+
+  {Dt3, RemoteBloom} = timer:tc(fun() -> dataset:get_bloom(RemoteDataset) end),
+  lager:info("Calculated remote bloom (dt=~.2fs).", [s(Dt3)]),
+
+  {Dt4, {SendCount, SendSize}} =
+    timer:tc(fun() -> dataset:post_transfer(LocalDataset, RemoteBloom,
+                                            RemoteDataset)
+             end),
+  lager:info("Transferred to remote (num_elements=~p, total_size=~pB, "
+             "dt=~.2fs)~n", [SendCount, SendSize, s(Dt4)]),
 
   {MaxIts1, Converged1} = case Converged(ReceiveCount, SendCount) of
               true  -> {Its + 2, fun(_, _) -> false end};
@@ -54,3 +62,10 @@ filter([H | T], B, Remainder)  ->
     true  -> filter(T, B, Remainder);
     false -> filter(T, B, [H | Remainder])
   end.
+
+s(T) -> T / (1000 * 1000).
+
+%% t(Msg, Fun) ->
+%%   {T, R} = timer:tc(Fun),
+%%   lager:info(Msg, [T / (1000 * 1000)p]),
+%%   R.

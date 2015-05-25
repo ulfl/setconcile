@@ -17,8 +17,8 @@ serve(<<"POST">>, Req) ->
   DatasetName = binary_to_existing_atom(DatasetName0, utf8),
   {ok, Body, Req2} = cowboy_req:body(Req1),
   D = misc:local_dataset(DatasetName),
-  E = binary_to_term(Body),
-  dataset:post_element(D, E),
+  L = binary_to_term(Body),
+  dataset:post_elements(D, L),
   cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2);
 serve(_, Req) ->
   cowboy_req:reply(405, Req).

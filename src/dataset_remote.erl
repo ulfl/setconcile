@@ -16,10 +16,6 @@ start_link(Host, Port, DatasetName) ->
   gen_server:start_link(?MODULE, [Host, Port, DatasetName], []).
 
 %%%_* Gen server callbacks =============================================
-get_all(Dataset) ->
-  {ok, Elements} = gen_server:call(Dataset, get_all),
-  Elements.
-
 init([Host, Port, Name]) ->
   {ok, #{host => Host, port => Port, dataset_name => Name}}.
 
@@ -38,12 +34,12 @@ handle_call({post_transfer, Bloom, _Dest}, _From,
   {ok, Body} = http_post(Host, Port, fmt("/api/datasets/~p/transfers", [Name]),
                          ebloom:serialize(Bloom), Tmo),
   {reply, {ok, binary_to_term(Body)}, S};
-handle_call({post_element, Element}, _From,
+handle_call({post_elements, L}, _From,
             #{host := Host, port := Port, dataset_name := Name} = S) ->
-  {ok, Tmo} = config:get(tmo_post_element),
-  Elem = term_to_binary(Element),
-  {ok, _} = http_post(Host, Port, fmt("/api/datasets/~p/", [Name]), Elem, Tmo),
-  {reply, {ok, byte_size(Elem)}, S};
+  {ok, Tmo} = config:get(tmo_post_elements),
+  Data = term_to_binary(L),
+  http_post(Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
+  {reply, {ok, byte_size(Data)}, S};
 handle_call(get_all, _From, S) ->
   {reply, {ok, []}, S};
 handle_call(stop, _From, State) ->

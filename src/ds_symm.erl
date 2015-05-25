@@ -23,10 +23,10 @@ remote() ->
   LocalDataset = misc:local_dataset(symm),
   RemoteDataset = misc:remote_dataset(symm),
   DatasetSize = size(dataset:get_all(LocalDataset), 0),
-  {ok, Its, Size, BloomSize} = reconcile:reconcile(LocalDataset,
-                                                       RemoteDataset, 30),
-  lager:info("Done (its=~p, data_size=~.2f MB, bloom_size=~.2f MB)~n",
-             [Its, mb(Size), mb(BloomSize)]),
+  {T, {ok, Its, Size, BloomSize}} =
+    timer:tc(fun() -> reconcile:reconcile(LocalDataset, RemoteDataset, 30) end),
+  lager:info("Done (time=~.2fs, its=~p, data_size=~.2f MB, "
+             "bloom_size=~.2f MB)~n", [sec(T), Its, mb(Size), mb(BloomSize)]),
   lager:info("Size of local dataset (dataset_size=~.2fMB)~n", [mb(DatasetSize)]),
   lager:info("Ratio of transferred data to dataset size (size_ratio=~.2f)~n",
              [(Size + BloomSize) / DatasetSize]),
@@ -51,14 +51,11 @@ local() ->
 %%%_* Helpers ==========================================================
 get(State) -> dict:to_list(State).
 
-put(State, L) ->
-  lists:foldl(fun({K, V1}, S) ->
-                  case dict:find(K, S) of
-                    error    -> dict:store(K, V1, S);
-                    {ok, V2} -> dict:store(K, resolve(V1, V2), S)
-                  end
-              end,
-              State, L).
+put(State, {K, V1}) ->
+  case dict:find(K, State) of
+    error    -> dict:store(K, V1, State);
+    {ok, V2} -> dict:store(K, resolve(V1, V2), State)
+  end.
 
 resolve(V1, V2) -> max(V1, V2).
 
@@ -119,3 +116,5 @@ size([], Size)      -> Size;
 size([H | T], Size) -> size(T, Size + byte_size(term_to_binary(H))).
 
 mb(X) -> X / (1024 * 1024).
+
+sec(T) -> T / (1000 * 1000).

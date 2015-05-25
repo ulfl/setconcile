@@ -4,7 +4,7 @@
 %% API.
 -export([get_bloom/1]).
 -export([post_transfer/3]).
--export([post_element/2]).
+-export([post_elements/2]).
 -export([get_all/1]).
 -export([ping/1]).
 -export([stop/1]).
@@ -19,8 +19,8 @@ post_transfer(Dataset, Bloom, Dest) ->
                                       infinity),
   {Len, Size}.
 
-post_element(Dataset, Element) ->
-  {ok, Size} = gen_server:call(Dataset, {post_element, Element}, infinity),
+post_elements(Dataset, Element) ->
+  {ok, Size} = gen_server:call(Dataset, {post_elements, Element}, infinity),
   Size.
 
 %%%_* Only dataset_local ===============================================

@@ -25,15 +25,12 @@ handle_call(get_bloom, _From, #{state := State, get := Get} = S) ->
 handle_call({post_transfer, Bloom, Dest}, _From,
             #{state := State, get := Get} = S) ->
   L = reconcile:filter(Get(State), Bloom, []),
-  Size = lists:foldl(fun(X, A) ->
-                         Size = dataset:post_element(Dest, X),
-                         A + Size
-                     end, 0, L),
+  Size = bundle(L, fun(X) -> dataset:post_elements(Dest, X) end),
   {reply, {ok, {length(L), Size}}, S};
-handle_call({post_element, Element}, _From, #{state := State0,
+handle_call({post_elements, L}, _From, #{state := State0,
                                               put := Put} = S) ->
-  State = Put(State0, [Element]),
-  {reply, {ok, byte_size(term_to_binary(Element))}, S#{state := State}};
+  State = lists:foldl(fun(X, A) -> Put(A, X) end, State0, L),
+  {reply, {ok, byte_size(term_to_binary(L))}, S#{state := State}};
 handle_call(get_all, _From, #{state := State, get := Get} = S) ->
   {reply, {ok, Get(State)}, S}.
 
@@ -44,3 +41,15 @@ handle_info(Msg, S) -> {stop, {unexpected_info, Msg}, S}.
 terminate(_Reason, _State) -> ok.
 
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
+
+%%%_* Helpers ==========================================================
+max_bundle() -> {ok, Max} = config:get(max_transfer_bundle), Max.
+
+bundle(L, F) -> bundle(max_bundle(), L, [], F, 0, max_bundle()).
+
+bundle(_, [], A, F, S, MaxBdl) ->
+  S + F(A);
+bundle(0, L, A, F, S, MaxBdl) ->
+  bundle(MaxBdl, L, [], F, S + F(A), MaxBdl);
+bundle(X, [H | T], A, F, S, MaxBdl) ->
+  bundle(X - 1, T, [H | A], F, S, MaxBdl).

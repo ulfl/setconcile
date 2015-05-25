@@ -22,7 +22,9 @@ start(_Type, _Args) ->
 
   %% Start the web server.
   {ok, _} = cowboy:start_http(http, 100, [{port, Port}],
-                              [{env, [{dispatch, Dispatch}]}]).
+                              [{env, [{dispatch, Dispatch}]},
+                               {max_keepalive, 100 * 1000 * 1000},
+                               {timeout, 60 * 1000}]).
 
 stop(_State) ->
   ok.

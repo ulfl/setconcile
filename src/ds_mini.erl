@@ -39,14 +39,11 @@ local() ->
 %%%_* Helpers ==========================================================
 get(State) -> dict:to_list(State).
 
-put(State, L) ->
-  lists:foldl(fun({K, V1}, S) ->
-                  case dict:find(K, S) of
-                    error    -> dict:store(K, V1, S);
-                    {ok, V2} -> dict:store(K, resolve(V1, V2), S)
-                  end
-              end,
-              State, L).
+put(State, {K, V1}) ->
+  case dict:find(K, State) of
+    error    -> dict:store(K, V1, State);
+    {ok, V2} -> dict:store(K, resolve(V1, V2), State)
+  end.
 
 resolve(V1, V2) -> max(V1, V2).
 
