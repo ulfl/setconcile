@@ -15,7 +15,8 @@ setup(Node, N, P, B) ->
         a -> L1;
         b -> L2
       end,
-  {ok, Ds} = dataset_local:start_link(dict:from_list(L), fun get/1, fun put/2),
+  {ok, Ds} = dataset_local:start_link(symm, dict:from_list(L), fun get/1,
+                                      fun put/2),
   {Ds, Expected}.
 
 remote() ->
@@ -71,10 +72,11 @@ resolve(V1, V2) -> max(V1, V2).
 %%   value on B.
 %%
 %% Total pairs on each node: N*(1-P) + N*P/4 + N*P/2 = N -
-%% N*P/4. Minimal number of pairs to be exchanged (assuming ideal bloom
-%% filters): Unique pairs on B and modified/unmodified pairs on B +
-%% unique pairs on A and modified pairs on A = (N*P/4 + N*P/2) + (N*P/4
-%% + N*P/4) = 5N*P/4. Transfer_size/dataset_size ratio: (5N*P/4) / (N -
+%% N*P/4. Minimal number of pairs to be exchanged (assuming a single
+%% iteration with ideal bloom filters and the transfer starting from A
+%% to B): Unique pairs on B and modified/unmodified pairs on B + unique
+%% pairs on A and modified pairs on A = (N*P/4 + N*P/2) + (N*P/4 +
+%% N*P/4) = 5N*P/4. Transfer_size/dataset_size ratio: (5N*P/4) / (N -
 %% N*P/4) = (5P)/(4-P). With P = 0.2 we get a ratio of 0.26.
 %%
 create(N, P, BulkBytes) when (trunc(N*P) > 0) and (trunc(N*P) rem 4 =:= 0) ->

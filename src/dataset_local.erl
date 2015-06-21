@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API.
--export([start_link/3]).
+-export([start_link/4]).
 
 %% Gen server callbacks.
 -export([init/1]).
@@ -13,19 +13,21 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
-start_link(State, Get, Put) ->
-  gen_server:start_link(?MODULE, [State, Get, Put], []).
+start_link(Name, State, Get, Put) ->
+  gen_server:start_link(?MODULE, [Name, State, Get, Put], []).
 
 %%%_* Gen server callbacks =============================================
-init([State, Get, Put]) -> {ok, #{state => State, get => Get, put => Put}}.
+init([Name, State, Get, Put]) ->
+  {ok, #{dataset_name => Name, state => State, get => Get, put => Put}}.
 
 handle_call(get_bloom, _From, #{state := State, get := Get} = S) ->
   Bloom = reconcile:create_bloom(Get(State)),
   {reply, {ok, Bloom}, S};
 handle_call({post_transfer, Bloom, Dest}, _From,
-            #{state := State, get := Get} = S) ->
+            #{dataset_name := Name, state := State, get := Get} = S) ->
   L = reconcile:filter(Get(State), Bloom, []),
-  Size = bundle(L, fun(X) -> dataset:post_elements(Dest, X) end),
+  MaxSize = misc:get_ds_config(Name, max_transfer_bundle),
+  Size = bundle(L, fun(X) -> dataset:post_elements(Dest, X) end, MaxSize),
   {reply, {ok, {length(L), Size}}, S};
 handle_call({post_elements, L}, _From, #{state := State0,
                                               put := Put} = S) ->
@@ -43,13 +45,11 @@ terminate(_Reason, _State) -> ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %%%_* Helpers ==========================================================
-max_bundle() -> {ok, Max} = config:get(max_transfer_bundle), Max.
+bundle(L, F, MaxSize) -> bundle(MaxSize, L, [], F, 0, MaxSize).
 
-bundle(L, F) -> bundle(max_bundle(), L, [], F, 0, max_bundle()).
-
-bundle(_, [], A, F, S, MaxBdl) ->
+bundle(_, [], A, F, S, _MaxSize) ->
   S + F(A);
-bundle(0, L, A, F, S, MaxBdl) ->
-  bundle(MaxBdl, L, [], F, S + F(A), MaxBdl);
-bundle(X, [H | T], A, F, S, MaxBdl) ->
-  bundle(X - 1, T, [H | A], F, S, MaxBdl).
+bundle(0, L, A, F, S, MaxSize) ->
+  bundle(MaxSize, L, [], F, S + F(A), MaxSize);
+bundle(X, [H | T], A, F, S, MaxSize) ->
+  bundle(X - 1, T, [H | A], F, S, MaxSize).

@@ -13,7 +13,8 @@ setup(Node) ->
         a -> L1;
         b -> L2
       end,
-  {ok, Ds} = dataset_local:start_link(dict:from_list(L), fun get/1, fun put/2),
+  {ok, Ds} = dataset_local:start_link(mini, dict:from_list(L), fun get/1,
+                                      fun put/2),
   Ds.
 
 remote() ->

@@ -24,19 +24,19 @@ handle_call(ping, _From, #{host := Host, port := Port} = S) ->
   {reply, {ok, Body}, S};
 handle_call(get_bloom, _From, #{host := Host, port := Port,
                                 dataset_name := Name} = S) ->
-  {ok, Tmo} = config:get(tmo_get_bloom),
+  Tmo = misc:get_ds_config(Name, tmo_get_bloom),
   {ok, Body} = http_get(Host, Port, fmt("/api/datasets/~p/bloom", [Name]), Tmo),
   {ok, Bloom} = ebloom:deserialize(Body),
   {reply, {ok, Bloom}, S};
 handle_call({post_transfer, Bloom, _Dest}, _From,
             #{host := Host, port := Port, dataset_name := Name} = S) ->
-  {ok, Tmo} = config:get(tmo_post_transfer),
+  Tmo = misc:get_ds_config(Name, tmo_post_transfer),
   {ok, Body} = http_post(Host, Port, fmt("/api/datasets/~p/transfers", [Name]),
                          ebloom:serialize(Bloom), Tmo),
   {reply, {ok, binary_to_term(Body)}, S};
 handle_call({post_elements, L}, _From,
             #{host := Host, port := Port, dataset_name := Name} = S) ->
-  {ok, Tmo} = config:get(tmo_post_elements),
+  Tmo = misc:get_ds_config(Name, tmo_post_elements),
   Data = term_to_binary(L),
   http_post(Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
   {reply, {ok, byte_size(Data)}, S};

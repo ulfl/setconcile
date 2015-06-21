@@ -3,10 +3,10 @@
 Node = erlang:list_to_atom(Node1),
 
 NodeCfg = case Node of
-            a -> #{port => 8080, remote_host => "127.0.0.1",
+            a -> #{port => 8080, remote_host => "127.0.01",
                    remote_port => 8081, name => a};
 
-            b -> #{port => 8081, remote_host => "127.0.0.1",
+            b -> #{port => 8081, remote_host => "127.0.01",
                    remote_port => 8080, name => b}
           end,
 
@@ -18,13 +18,22 @@ NodeCfg = case Node of
    bloom_false_probability => 0.5,
 
    datasets => #{
-     mini => ds_mini:setup(Node),
-     symm => Symm
-    },
+     mini => #{
+       dataset             => ds_mini:setup(Node),
+       tmo_get_bloom       => 1000 * 3600,
+       tmo_post_transfer   => 1000 * 3600,
+       tmo_post_elements   => 1000 * 10,
+       max_transfer_bundle => 100
+      },
 
-   symm_expected => SymmExpected,
+     symm => #{
+       dataset             => Symm,
+       tmo_get_bloom       => 1000 * 3600,
+       tmo_post_transfer   => 1000 * 3600,
+       tmo_post_elements   => 1000 * 10,
+       max_transfer_bundle => 100
+      }
+   },
 
-   tmo_get_bloom     => 1000 * 3600,
-   tmo_post_transfer => 1000 * 3600,
-   tmo_post_element  => 1000 * 10
+   symm_expected => SymmExpected
 }.
