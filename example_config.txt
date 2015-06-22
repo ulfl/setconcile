@@ -2,6 +2,7 @@
 [Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
 Node = erlang:list_to_atom(Node1),
 
+%% Determine our node config based on the Erlang node name.
 NodeCfg = case Node of
             a -> #{port => 8080, remote_host => "127.0.01",
                    remote_port => 8081, name => a};
@@ -15,25 +16,26 @@ NodeCfg = case Node of
 #{
    node => NodeCfg,
 
-   bloom_false_probability => 0.5,
-
    datasets => #{
      mini => #{
-       dataset             => ds_mini:setup(Node),
-       tmo_get_bloom       => 1000 * 3600,
-       tmo_post_transfer   => 1000 * 3600,
-       tmo_post_elements   => 1000 * 10,
-       max_transfer_bundle => 100
+       dataset                 => ds_mini:setup(Node),
+       tmo_get_bloom           => 1000 * 3600,
+       tmo_post_transfer       => 1000 * 3600,
+       tmo_post_elements       => 1000 * 10,
+       max_transfer_bundle     => 100,
+       max_its                 => 25,
+       bloom_false_probability => 0.5
       },
 
      symm => #{
-       dataset             => Symm,
-       tmo_get_bloom       => 1000 * 3600,
-       tmo_post_transfer   => 1000 * 3600,
-       tmo_post_elements   => 1000 * 10,
-       max_transfer_bundle => 100
+       dataset                 => Symm,
+       symm_expected           => SymmExpected,
+       tmo_get_bloom           => 1000 * 3600,
+       tmo_post_transfer       => 1000 * 3600,
+       tmo_post_elements       => 1000 * 10,
+       max_transfer_bundle     => 100,
+       max_its                 => 25,
+       bloom_false_probability => 0.5
       }
-   },
-
-   symm_expected => SymmExpected
+    }
 }.

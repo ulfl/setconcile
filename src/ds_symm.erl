@@ -20,12 +20,15 @@ setup(Node, N, P, B) ->
   {Ds, Expected}.
 
 remote() ->
-  {ok, Expected} = config:get(symm_expected),
+  Expected = misc:get_ds_config(symm, symm_expected),
   LocalDataset = misc:local_dataset(symm),
   RemoteDataset = misc:remote_dataset(symm),
   DatasetSize = size(dataset:get_all(LocalDataset), 0),
+  MaxIts = misc:get_ds_config(symm, max_its),
   {T, {ok, Its, Size, BloomSize}} =
-    timer:tc(fun() -> reconcile:reconcile(LocalDataset, RemoteDataset, 30) end),
+    timer:tc(fun() ->
+                 reconcile:reconcile(LocalDataset, RemoteDataset, MaxIts)
+             end),
   lager:info("Done (time=~.2fs, its=~p, data_size=~.2f MB, "
              "bloom_size=~.2f MB)~n", [sec(T), Its, mb(Size), mb(BloomSize)]),
   lager:info("Size of local dataset (dataset_size=~.2fMB)~n", [mb(DatasetSize)]),
@@ -39,7 +42,8 @@ local() ->
   {B, ExpectedB} = setup(b),
   DatasetSizeA = size(dataset:get_all(A), 0),
   DatasetSizeB = size(dataset:get_all(B), 0),
-  {ok, Its, Size, BloomSize} = reconcile:reconcile(A, B, 30),
+  MaxIts = misc:get_ds_config(symm, max_its),
+  {ok, Its, Size, BloomSize} = reconcile:reconcile(A, B, MaxIts),
   lager:info("Done (its=~p, data_size=~.2f MB, bloom_size=~.2f MB)~n",
              [Its, mb(Size), mb(BloomSize)]),
   lager:info("Size of dataset A: ~.2fMB~n", [mb(DatasetSizeA)]),

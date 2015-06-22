@@ -20,8 +20,10 @@ start_link(Name, State, Get, Put) ->
 init([Name, State, Get, Put]) ->
   {ok, #{dataset_name => Name, state => State, get => Get, put => Put}}.
 
-handle_call(get_bloom, _From, #{state := State, get := Get} = S) ->
-  Bloom = reconcile:create_bloom(Get(State)),
+handle_call(get_bloom, _From, #{dataset_name := Name, state := State,
+                                get := Get} = S) ->
+  FalseProbability = misc:get_ds_config(Name, bloom_false_probability),
+  Bloom = reconcile:create_bloom(Get(State), FalseProbability),
   {reply, {ok, Bloom}, S};
 handle_call({post_transfer, Bloom, Dest}, _From,
             #{dataset_name := Name, state := State, get := Get} = S) ->

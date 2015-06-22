@@ -2,7 +2,7 @@
 -module(reconcile).
 
 -export([reconcile/3]).
--export([create_bloom/1]).
+-export([create_bloom/2]).
 -export([filter/3]).
 
 reconcile(LocalDataset, RemoteDataset, MaxIts) ->
@@ -44,17 +44,16 @@ converged(C1, C2) -> C1 + C2 =:= 0.
 
 bloom_size(B) -> byte_size(ebloom:serialize(B)).
 
-create_bloom(L) ->
+create_bloom(L, FalseProbability) ->
   N = length(L),
-  {ok, FalseProbability} = config:get(bloom_false_probability),
   {ok, B} = ebloom:new(N, FalseProbability, random:uniform(10000000)),
-  create_bloom(L, B).
+  populate_bloom(L, B).
 
-create_bloom([], B) ->
+populate_bloom([], B) ->
   B;
-create_bloom([H | T], B) ->
+populate_bloom([H | T], B) ->
   ebloom:insert(B, term_to_binary(H)),
-  create_bloom(T, B).
+  populate_bloom(T, B).
 
 filter([], _B, Remainder)      -> Remainder;
 filter([H | T], B, Remainder)  ->
