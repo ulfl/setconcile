@@ -57,8 +57,10 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 http_get(Host, Port, Path, Tmo) ->
   try
     Url = fmt("http://~s:~p~s", [Host, Port, Path]),
-    {ok, {_Res, _Headers, Body}} = lhttpc:request(Url, "GET", [], Tmo),
-    {ok, Body}
+    {ok, 200, _RespHeaders, Ref} = hackney:request(get, Url, [], <<>>,
+                                                   [{pool, default},
+                                                    {connect_timeout, Tmo}]),
+    {ok, _RespBody} = hackney:body(Ref)
   catch
     C:E -> lager:info("http_get: ~p:~p", [C, E]), error
   end.
@@ -66,8 +68,10 @@ http_get(Host, Port, Path, Tmo) ->
 http_post(Host, Port, Path, Body, Tmo) ->
   try
     Url = fmt("http://~s:~p~s", [Host, Port, Path]),
-    {ok, {_Res, _Headers, ResBody}} = lhttpc:request(Url, "POST", [], Body, Tmo),
-    {ok, ResBody}
+    {ok, 200, _RespHeaders, Ref} = hackney:request(post, Url, [], Body,
+                                                   [{pool, default},
+                                                    {connect_timeout, Tmo}]),
+    {ok, _RespBody} = hackney:body(Ref)
   catch
     C:E -> lager:info("http_post: ~p:~p", [C, E]), error
   end.

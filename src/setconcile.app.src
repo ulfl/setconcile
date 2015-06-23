@@ -11,7 +11,7 @@
                   lager,
                   config,
                   ebloom,
-                  lhttpc,
+                  hackney,
                   cowboy
                  ]},
   {mod, {setconcile_app, []}},
