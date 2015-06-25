@@ -14,7 +14,7 @@ setup(Node, N, P, B) ->
         b -> L2
       end,
   {ok, Ds} = dataset_local:start_link(symm, dict:from_list(L), fun prep/1,
-                                      fun get/1, fun put/2, fun done/1),
+                                      fun get/1, fun put/2, fun unprep/1),
   {Ds, Expected}.
 
 %%%_* Helpers ==========================================================
@@ -30,7 +30,7 @@ put(State, {K, V1}) ->
 
 resolve(V1, V2) -> max(V1, V2).
 
-done(State) ->
+unprep(State) ->
   Expected = misc:get_ds_config(symm, symm_expected),
   verify(dict:to_list(State), Expected),
   State.
