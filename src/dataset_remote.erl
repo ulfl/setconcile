@@ -20,28 +20,37 @@ init([Host, Port, Name]) ->
   {ok, #{host => Host, port => Port, dataset_name => Name}}.
 
 handle_call(ping, _From, #{host := Host, port := Port} = S) ->
-  {ok, Body} = http_get(Host, Port, "/api/ping", 5000),
+  {ok, Body} = http(get, Host, Port, "/api/ping", <<>>, 5000),
   {reply, {ok, Body}, S};
+handle_call(prep, _From, #{host := Host, port := Port,
+                           dataset_name := Name} = S) ->
+  Tmo = misc:get_ds_config(Name, tmo_prep),
+  http(put, Host, Port, fmt("/api/datasets/~p/prep", [Name]), <<>>, Tmo),
+  {reply, ok, S};
 handle_call(get_bloom, _From, #{host := Host, port := Port,
                                 dataset_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_get_bloom),
-  {ok, Body} = http_get(Host, Port, fmt("/api/datasets/~p/bloom", [Name]), Tmo),
+  {ok, Body} = http(get, Host, Port, fmt("/api/datasets/~p/bloom", [Name]),
+                    <<>>, Tmo),
   {ok, Bloom} = ebloom:deserialize(Body),
   {reply, {ok, Bloom}, S};
 handle_call({post_transfer, Bloom, _Dest}, _From,
             #{host := Host, port := Port, dataset_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_post_transfer),
-  {ok, Body} = http_post(Host, Port, fmt("/api/datasets/~p/transfers", [Name]),
-                         ebloom:serialize(Bloom), Tmo),
+  {ok, Body} = http(post, Host, Port, fmt("/api/datasets/~p/transfers", [Name]),
+                    ebloom:serialize(Bloom), Tmo),
   {reply, {ok, binary_to_term(Body)}, S};
 handle_call({post_elements, L}, _From,
             #{host := Host, port := Port, dataset_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_post_elements),
   Data = term_to_binary(L),
-  http_post(Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
+  http(post, Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
   {reply, {ok, byte_size(Data)}, S};
-handle_call(get_all, _From, S) ->
-  {reply, {ok, []}, S};
+handle_call(unprep, _From, #{host := Host, port := Port,
+                             dataset_name := Name} = S) ->
+  Tmo = misc:get_ds_config(Name, tmo_unprep),
+  http(delete, Host, Port, fmt("/api/datasets/~p/prep", [Name]), <<>>, Tmo),
+  {reply, ok, S};
 handle_call(stop, _From, State) ->
   {stop, normal, ok, State}.
 
@@ -54,26 +63,15 @@ terminate(_Reason, _State) -> ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %%%_* Helpers ==========================================================
-http_get(Host, Port, Path, Tmo) ->
+http(Op, Host, Port, Path, Data, Tmo) ->
   try
     Url = fmt("http://~s:~p~s", [Host, Port, Path]),
-    {ok, 200, _RespHeaders, Ref} = hackney:request(get, Url, [], <<>>,
+    {ok, 200, _RespHeaders, Ref} = hackney:request(Op, Url, [], Data,
                                                    [{pool, default},
-                                                    {connect_timeout, Tmo}]),
+                                                    {recv_timeout, Tmo}]),
     {ok, _RespBody} = hackney:body(Ref)
   catch
-    C:E -> lager:info("http_get: ~p:~p", [C, E]), error
-  end.
-
-http_post(Host, Port, Path, Body, Tmo) ->
-  try
-    Url = fmt("http://~s:~p~s", [Host, Port, Path]),
-    {ok, 200, _RespHeaders, Ref} = hackney:request(post, Url, [], Body,
-                                                   [{pool, default},
-                                                    {connect_timeout, Tmo}]),
-    {ok, _RespBody} = hackney:body(Ref)
-  catch
-    C:E -> lager:info("http_post: ~p:~p", [C, E]), error
+    C:E -> lager:info("http ~p: ~p:~p", [Op, C, E]), error
   end.
 
 fmt(Str, Args) -> lists:flatten(io_lib:format(Str, Args)).

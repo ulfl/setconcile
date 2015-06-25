@@ -3,8 +3,6 @@
 
 -export([setup/1]).
 -export([setup/4]).
--export([remote/0]).
--export([local/0]).
 
 %%%_* Remote test ======================================================
 setup(Node) -> setup(Node, 10000, 0.2, 100).
@@ -15,45 +13,13 @@ setup(Node, N, P, B) ->
         a -> L1;
         b -> L2
       end,
-  {ok, Ds} = dataset_local:start_link(symm, dict:from_list(L), fun get/1,
-                                      fun put/2),
+  {ok, Ds} = dataset_local:start_link(symm, dict:from_list(L), fun prep/1,
+                                      fun get/1, fun put/2, fun done/1),
   {Ds, Expected}.
 
-remote() ->
-  Expected = misc:get_ds_config(symm, symm_expected),
-  LocalDataset = misc:local_dataset(symm),
-  RemoteDataset = misc:remote_dataset(symm),
-  DatasetSize = size(dataset:get_all(LocalDataset), 0),
-  MaxIts = misc:get_ds_config(symm, max_its),
-  {T, {ok, Its, Size, BloomSize}} =
-    timer:tc(fun() ->
-                 reconcile:reconcile(LocalDataset, RemoteDataset, MaxIts)
-             end),
-  lager:info("Done (time=~.2fs, its=~p, data_size=~.2f MB, "
-             "bloom_size=~.2f MB)~n", [sec(T), Its, mb(Size), mb(BloomSize)]),
-  lager:info("Size of local dataset (dataset_size=~.2fMB)~n", [mb(DatasetSize)]),
-  lager:info("Ratio of transferred data to dataset size (size_ratio=~.2f)~n",
-             [(Size + BloomSize) / DatasetSize]),
-  verify(dataset:get_all(LocalDataset), Expected).
-
-%%%_* Local test =======================================================
-local() ->
-  {A, ExpectedA} = setup(a),
-  {B, ExpectedB} = setup(b),
-  DatasetSizeA = size(dataset:get_all(A), 0),
-  DatasetSizeB = size(dataset:get_all(B), 0),
-  MaxIts = misc:get_ds_config(symm, max_its),
-  {ok, Its, Size, BloomSize} = reconcile:reconcile(A, B, MaxIts),
-  lager:info("Done (its=~p, data_size=~.2f MB, bloom_size=~.2f MB)~n",
-             [Its, mb(Size), mb(BloomSize)]),
-  lager:info("Size of dataset A: ~.2fMB~n", [mb(DatasetSizeA)]),
-  lager:info("Size of dataset B: ~.2fMB~n", [mb(DatasetSizeB)]),
-  lager:info("Ratio of transferred data to dataset A size (size_ratio=~.2f)~n",
-             [(Size + BloomSize) / DatasetSizeA]),
-  verify(dataset:get_all(A), ExpectedA),
-  verify(dataset:get_all(B), ExpectedB).
-
 %%%_* Helpers ==========================================================
+prep(State) -> {size(dict:to_list(State), 0), State}.
+
 get(State) -> dict:to_list(State).
 
 put(State, {K, V1}) ->
@@ -63,6 +29,11 @@ put(State, {K, V1}) ->
   end.
 
 resolve(V1, V2) -> max(V1, V2).
+
+done(State) ->
+  Expected = misc:get_ds_config(symm, symm_expected),
+  verify(dict:to_list(State), Expected),
+  State.
 
 %% Return a new dataset of key/value pairs for nodes A and B. For each
 %% node the pairs will have the following characteristics:
@@ -120,7 +91,3 @@ verify(CurrentDataset, Expected) ->
 
 size([], Size)      -> Size;
 size([H | T], Size) -> size(T, Size + byte_size(term_to_binary(H))).
-
-mb(X) -> X / (1024 * 1024).
-
-sec(T) -> T / (1000 * 1000).

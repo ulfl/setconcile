@@ -9,7 +9,12 @@ start(_Type, _Args) ->
   Dispatch = cowboy_router:compile(
                [
                 {'_', [
+                       %% External.
                        {"/api/ping", ping_handler, []},
+                       {"/api/datasets/:set/recons", recons_handler, []},
+
+                       %% Internal.
+                       {"/api/datasets/:set/prep", prep_handler, []},
                        {"/api/datasets/:set/bloom", bloom_handler, []},
                        {"/api/datasets/:set/transfers", transfers_handler, []},
                        {"/api/datasets/:set", element_handler, []}

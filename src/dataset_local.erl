@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API.
--export([start_link/4]).
+-export([start_link/6]).
 
 %% Gen server callbacks.
 -export([init/1]).
@@ -13,13 +13,17 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
-start_link(Name, State, Get, Put) ->
-  gen_server:start_link(?MODULE, [Name, State, Get, Put], []).
+start_link(Name, State, Prep, Get, Put, Unprep) ->
+  gen_server:start_link(?MODULE, [Name, State, Prep, Get, Put, Unprep], []).
 
 %%%_* Gen server callbacks =============================================
-init([Name, State, Get, Put]) ->
-  {ok, #{dataset_name => Name, state => State, get => Get, put => Put}}.
+init([Name, State, Prep, Get, Put, Unprep]) ->
+  {ok, #{dataset_name => Name, state => State, prep => Prep, get => Get,
+         put => Put, unprep => Unprep}}.
 
+handle_call(prep, _From, #{state := State, prep := Prep} = S) ->
+  {Size, State1} = Prep(State),
+  {reply, Size, S#{state := State1}};
 handle_call(get_bloom, _From, #{dataset_name := Name, state := State,
                                 get := Get} = S) ->
   FalseProbability = misc:get_ds_config(Name, bloom_false_probability),
@@ -35,8 +39,9 @@ handle_call({post_elements, L}, _From, #{state := State0,
                                               put := Put} = S) ->
   State = lists:foldl(fun(X, A) -> Put(A, X) end, State0, L),
   {reply, {ok, byte_size(term_to_binary(L))}, S#{state := State}};
-handle_call(get_all, _From, #{state := State, get := Get} = S) ->
-  {reply, {ok, Get(State)}, S}.
+handle_call(unprep, _From, #{state := State, unprep := Unprep} = S) ->
+  State1 = Unprep(State),
+  {reply, ok, S#{state := State1}}.
 
 handle_cast(Msg, S) -> {stop, {unexpected_cast, Msg}, S}.
 
