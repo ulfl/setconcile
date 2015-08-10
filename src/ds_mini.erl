@@ -12,7 +12,8 @@ setup(Node) ->
         b -> L2
       end,
   {ok, Ds} = dataset_local:start_link(mini, dict:from_list(L), fun prep/1,
-                                      fun get/1, fun put/2, fun unprep/1),
+                                      fun get/1, fun get_vals/2, fun put/2,
+                                      fun unprep/1),
   Ds.
 
 %%%_* Helpers ==========================================================
@@ -22,6 +23,8 @@ prep(State) ->
   {size(L, 0), State}.
 
 get(State) -> dict:to_list(State).
+
+get_vals(_State, L) -> L.
 
 put(State, {K, V1}) ->
   case dict:find(K, State) of

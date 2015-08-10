@@ -17,13 +17,15 @@ get_bloom(Dataset) ->
   {ok, Bloom} = gen_server:call(Dataset, get_bloom, infinity),
   Bloom.
 
+%% Transfer all data in Dataset that is not in Bloom to Dest.
 post_transfer(Dataset, Bloom, Dest) ->
   {ok, {Len, Size}} = gen_server:call(Dataset, {post_transfer, Bloom, Dest},
                                       infinity),
   {Len, Size}.
 
-post_elements(Dataset, Element) ->
-  {ok, Size} = gen_server:call(Dataset, {post_elements, Element}, infinity),
+%% Store all Elements in Dataset.
+post_elements(Dataset, Elements) ->
+  {ok, Size} = gen_server:call(Dataset, {post_elements, Elements}, infinity),
   Size.
 
 unprep(Dataset) -> gen_server:call(Dataset, unprep, infinity).

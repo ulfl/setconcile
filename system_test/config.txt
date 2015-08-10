@@ -1,0 +1,76 @@
+%% Determine our Erlang node name.
+[Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
+Node = erlang:list_to_atom(Node1),
+
+NodeA = "52.18.251.31",
+NodeB = "54.148.130.99",
+
+%% Determine our node config based on the Erlang node name.
+NodeCfg = case Node of
+            a -> #{port => 9001, remote_host => NodeB,
+                   remote_port => 9001, name => a};
+
+            b -> #{port => 9001, remote_host => NodeA,
+                   remote_port => 9001, name => b}
+          end,
+
+{Symm, SymmExpected} = ds_symm:setup(Node, 100000, 0.2, 1024),
+
+#{
+   node => NodeCfg,
+
+   datasets => #{
+     mini => #{
+       dataset                 => ds_mini:setup(Node),
+       tmo_prep                => 1000 * 10,
+       tmo_get_bloom           => 1000 * 10,
+       tmo_post_transfer       => 1000 * 10,
+       tmo_post_elements       => 1000 * 10,
+       tmo_unprep              => 1000 * 10,
+       max_transfer_bundle     => 100,
+       max_its                 => 25,
+       bloom_false_probability => 0.5
+      },
+
+     symm => #{
+       dataset                 => Symm,
+       symm_expected           => SymmExpected,
+       tmo_prep                => 1000 * 3600,
+       tmo_get_bloom           => 1000 * 3600,
+       tmo_post_transfer       => 1000 * 3600,
+       tmo_post_elements       => 1000 * 10,
+       tmo_unprep              => 1000 * 3600,
+       max_transfer_bundle     => 100,
+       max_its                 => 25,
+       bloom_false_probability => 0.5
+      },
+
+     riak_mini => #{
+       dataset                 => ds_riak:setup(riak_mini, "127.0.0.1",
+                                                <<"mini">>),
+       symm_expected           => SymmExpected,
+       tmo_prep                => 1000 * 3600,
+       tmo_get_bloom           => 1000 * 3600,
+       tmo_post_transfer       => 1000 * 3600,
+       tmo_post_elements       => 1000 * 10,
+       tmo_unprep              => 1000 * 3600,
+       max_transfer_bundle     => 100,
+       max_its                 => 25,
+       bloom_false_probability => 0.5
+     },
+
+     riak_set_a => #{
+       dataset                 => ds_riak:setup(riak_set_a, "127.0.0.1",
+                                                <<"set_a">>),
+       symm_expected           => SymmExpected,
+       tmo_prep                => 1000 * 3600,
+       tmo_get_bloom           => 1000 * 3600,
+       tmo_post_transfer       => 1000 * 3600,
+       tmo_post_elements       => 1000 * 10,
+       tmo_unprep              => 1000 * 3600,
+       max_transfer_bundle     => 100,
+       max_its                 => 25,
+       bloom_false_probability => 0.5
+     }
+   }
+}.
