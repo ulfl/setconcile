@@ -66,7 +66,7 @@ converged(C1, C2) -> C1 + C2 =:= 0.
 bloom_size(B) -> byte_size(ebloom:serialize(B)).
 
 create_bloom(L, FalseProbability) ->
-  N = length(L),
+  N = max(1, length(L)), % Don't allow N to be zero.
   {ok, B} = ebloom:new(N, FalseProbability, random:uniform(10000000)),
   populate_bloom(L, B).
 

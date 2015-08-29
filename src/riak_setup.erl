@@ -1,22 +1,32 @@
 -module(riak_setup).
 
--export([setup/6]).
+-export([setup/5]).
+-export([verify/5]).
 -export([setup_mini/0]).
 -export([clear/2]).
 -export([count/2]).
 -export([keys/2]).
 
-%% i.e. riak_setup:setup(a, "127.0.0.1", <<"set_a">>, 40, 0.1, 0).
-setup(Node, Ip, Bucket, N, P, B) ->
+%% i.e. riak_setup:setup("127.0.0.1", <<"set_a">>, 100000, 0.1, 2048).
+setup(Ip, Bucket, N, P, B) ->
   Pid = riak_ops:connect(Ip),
   riak_ops:configure_bucket(Pid, Bucket),
   riak_ops:clear(Pid, Bucket),
   timer:sleep(5000),
-  {Dt, _} = timer:tc(fun() -> create_objects(Node, Pid, Bucket, N, P, B) end),
+  {Dt, _} = timer:tc(fun() -> create_objects(Pid, Bucket, N, P, B) end),
   io:format("Setup time: ~ps~n", [Dt / (1000 * 1000)]),
   ok.
 
-%% riak_setup:mini().
+%% i.e. riak_setup:verify("127.0.0.1", <<"set_a">>, 100000, 0.1, 2048).
+verify(Ip, Bucket, N, P, B) ->
+  Pid = riak_ops:connect(Ip),
+  {_, _, Expected} = symmetric_dataset:create(N, P, B),
+  Keys = riak_ops:keys(Pid, Bucket),
+  KeyVals = [{Key, riak_ops:get(Pid, Bucket, Key, fun() -> error(sibling) end)} ||
+              Key <- Keys],
+  symmetric_dataset:verify(KeyVals, Expected).
+
+%% riak_setup:setup_mini().
 setup_mini() ->
   Ip = "127.0.0.1",
   Bucket = <<"mini">>,
@@ -54,19 +64,16 @@ keys(Ip, Bucket) ->
   riak_ops:keys(Pid, Bucket).
 
 %%%_* Internal =========================================================
-create_objects(Node, Pid, Bucket, N, P, B) ->
-  {L1, L2, _Expected} = symmetric_dataset:create(N, P, B),
-  L = case Node of
+create_objects(Pid, Bucket, N, P, B) ->
+  {L1, L2, Expected} = symmetric_dataset:create(N, P, B),
+  L = case node_name() of
         a -> L1;
         b -> L2
       end,
-  io:format("riak_setup: ~p~n", [length(L)]),
   Resolve = fun(_, _) -> error(existing_object) end,
   [riak_ops:put(Pid, Bucket, Key, Value, Resolve) || {Key, Value} <- L],
-  {Key, Value} = hd(L),
-  lager:info("first elem: ~p", [{Key, Value}]),
-  lager:info("db lookup: ~p", [riak_ops:get(Pid, Bucket, Key)]).
+  Expected.
 
 node_name() ->
   [Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
-  Node = erlang:list_to_atom(Node1).
+  erlang:list_to_atom(Node1).

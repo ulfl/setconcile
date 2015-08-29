@@ -7,7 +7,7 @@
 -export([clear/2]).
 -export([count/2]).
 -export([put/5]).
--export([get/3]).
+-export([get/4]).
 
 connect(Ip) ->
   {ok, Pid} = riakc_pb_socket:start(Ip, 8087, [{connect_timeout, 5000},
@@ -31,17 +31,35 @@ clear(Pid, Bucket) ->
 
 count(Pid, Bucket) -> length(keys(Pid, Bucket)).
 
+%% Key / Value has been received from the remote host and we need to
+%% update the local DB. View this as a normal update, i.e. we read up
+%% the current object (resolve siblings if necessary), make a
+%% modification (i.e. resolving with the remote object), and write the
+%% result to the DB. If there is no existing object, then we just create
+%% a new one. The value that was stored is returned.
 put(Pid, Bucket, Key, Value, Resolve) ->
-  NewObj = case riakc_pb_socket:get(Pid, Bucket, Key) of
-             {error, notfound} ->
-               riakc_obj:new(Bucket, Key, term_to_binary(Value));
-             {ok, Obj} ->
-               ExistingValue = binary_to_term(riakc_obj:get_value(Obj)),
-               NewValue = Resolve(ExistingValue, Value),
-               riakc_obj:update_value(Obj, term_to_binary(NewValue))
-           end,
-  ok = riakc_pb_socket:put(Pid, NewObj, [{w, quorum}, {dw, one}], 5000).
+  {NewObj, NewValue} =
+    case riakc_pb_socket:get(Pid, Bucket, Key) of
+      {error, notfound} ->
+        {riakc_obj:new(Bucket, Key, term_to_binary(Value)), Value};
+      {ok, Obj} ->
+        Values = [binary_to_term(X) || X <- riakc_obj:get_values(Obj)],
+        Value1 = do_resolve([Value | Values], Resolve),
+        {riakc_obj:update_value(Obj, term_to_binary(Value1)), Value1}
+    end,
+  ok = riakc_pb_socket:put(Pid, NewObj, [{w, quorum}, {dw, one}], 5000),
+  NewValue.
 
-get(Pid, Bucket, Key) ->
+%% Get the current value for Key in the DB. In case there are siblings
+%% they are resolved. FIXME: what if object deleted?
+get(Pid, Bucket, Key, Resolve) ->
   {ok, Obj} = riakc_pb_socket:get(Pid, Bucket, Key),
-  binary_to_term(riakc_obj:get_value(Obj)).
+  Values = [binary_to_term(X) || X <- riakc_obj:get_values(Obj)],
+  do_resolve(Values, Resolve).
+
+do_resolve([H], _Resolve)   ->
+  H;
+do_resolve([H|T], Resolve) ->
+  F = fun(X, A) -> Resolve(X, A) end,
+  lists:foldl(F, H, T).
+

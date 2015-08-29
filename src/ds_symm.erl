@@ -23,7 +23,7 @@ prep(State) -> {size(dict:to_list(State), 0), State}.
 
 get(State) -> dict:to_list(State).
 
-get_vals(State, L) -> L.
+get_vals(_State, L) -> L.
 
 put(State, {K, V1}) ->
   case dict:find(K, State) of

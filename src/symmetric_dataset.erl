@@ -3,6 +3,8 @@
 -export([create/3]).
 -export([verify/2]).
 
+-include_lib("eunit/include/eunit.hrl").
+
 %% Return a new dataset of key/value pairs for nodes A and B. For each
 %% node the pairs will have the following characteristics:
 %%
@@ -52,9 +54,20 @@ update(L) -> [{K, {Time + 1, Bulk}} || {K, {Time, Bulk}} <- L].
 verify(CurrentDataset, Expected) ->
   lager:info("num_elements_current=~p, num_elements_expected=~p",
              [length(CurrentDataset), length(Expected)]),
-  case lists:sort(CurrentDataset) =:= lists:sort(Expected) of
-    true -> lager:info("Correct!~n", []);
-    false -> lager:info("INCORRECT!~n", [])
+  compare(lists:sort(CurrentDataset), lists:sort(Expected)).
+
+compare([], []) ->
+  lager:info("Correct!~n", []),
+  match;
+compare([], [H|_]) ->
+  lager:info("Incorrect. Expected elem ~p!~n", [H]);
+compare([H|_], []) ->
+  lager:info("Incorrect. Extra elem ~p!~n", [H]);
+compare([H1|L1], [H2|L2]) ->
+  case H1 =:= H2 of
+    true -> compare(L1, L2);
+    false -> lager:info("Incorrect. Elements ~p and ~p don't match!~n",
+                        [H1, H2])
   end.
 
 size([], Size)      -> Size;

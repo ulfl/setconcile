@@ -11,12 +11,27 @@ start(_Type, _Args) ->
                 {'_', [
                        %% External.
                        {"/api/ping", ping_handler, []},
+
+                       %% Trigger reconciliation of the given dataset
+                       %% (POST).
                        {"/api/datasets/:set/recons", recons_handler, []},
 
-                       %% Internal.
+                       %% Prep a dataset for reconciliation (PUT) or unprep
+                       %% the dataset (DELETE).
                        {"/api/datasets/:set/prep", prep_handler, []},
+
+                       %% GET the current bloom filter for the given
+                       %% dataset.
                        {"/api/datasets/:set/bloom", bloom_handler, []},
+
+                       %% Create a transfer (POST). The request contains
+                       %% a bloom filter containing all the elements on
+                       %% the requesting node. The request will be
+                       %% serviced by POSTing back all elements not in
+                       %% the bloom filter to the requesting node.
                        {"/api/datasets/:set/transfers", transfers_handler, []},
+
+                       %% POST elements to be included in the given set.
                        {"/api/datasets/:set", element_handler, []}
                       ]}
                ]),
@@ -28,7 +43,7 @@ start(_Type, _Args) ->
   %% Start the web server.
   {ok, _} = cowboy:start_http(http, 100, [{port, Port}],
                               [{env, [{dispatch, Dispatch}]},
-                               {max_keepalive, 100 * 1000 * 1000},
+                               {max_keepalive,  1000},
                                {timeout, 60 * 1000}]).
 
 stop(_State) ->

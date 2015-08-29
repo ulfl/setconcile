@@ -2,14 +2,14 @@
 
 set -e
 
-NODE_A="52.18.225.108"
-NODE_B="52.7.129.82"
+NODE_A=`terraform output node_a`
+NODE_B=`terraform output node_b`
 
 # Make sure both nodes are up.
 curl -f http://${NODE_A}:9001/api/ping
 curl -f http://${NODE_B}:9001/api/ping
 
-time curl -X POST http://${NODE_A}:9001/api/datasets/mini
+#time curl -X POST http://${NODE_A}:9001/api/datasets/mini/recons
 #time curl -X POST http://${NODE_A}:9001/api/datasets/symm/recons
 #time curl -X POST http://${NODE_A}:9001/api/datasets/riak_mini/recons
-#time curl -X POST http://${NODE_A}:9001/api/datasets/riak_set_a/recons
+time curl -X POST http://${NODE_A}:9001/api/datasets/riak_set_a/recons

@@ -3,6 +3,7 @@
 
 -export([setup/3]).
 
+%% Configure resolver and strip function at this level.
 setup(Name, Ip, Bucket) ->
   {ok, Ds} = dataset_local:start_link(Name, {Ip, Bucket, no_pid, no_keys},
                                       fun prep/1, fun get/1, fun get_vals/2,
@@ -10,32 +11,41 @@ setup(Name, Ip, Bucket) ->
   Ds.
 
 %%%_* Internal =========================================================
+
+%% Prepare to start syncing.
 prep({Ip, Bucket, _, _}) ->
   Pid = riak_ops:connect(Ip),
-  Keys = riak_ops:keys(Pid, Bucket),
+  KeyVals0 = map(Pid, Bucket),
+  KeyVals = dict:from_list(KeyVals0),
   Size = 1, % Could calculate ds size.
-  {Size, {Ip, Bucket, Pid, Keys}}.
+  {Size, {Ip, Bucket, Pid, KeyVals}}.
 
-%% Return all {Key, Val} tuples. (get_all or perhaps get_bloom).
-get({_Ip, Bucket, Pid, Keys}) ->
-  map_keys(Pid, Bucket, Keys).
+%% Get the list of {Key, HashedVal} tuples.
+get({_Ip, _Bucket, _Pid, KeyVals}) -> dict:to_list(KeyVals).
 
-get_vals({_Ip, Bucket, Pid, _Keys}, L) ->
-  [{Key, riak_ops:get(Pid, Bucket, Key)} || {Key, _HashedVal} <- L].
+%% Given a list L of {Key, HashedVal} tuples, return the list of {Key,
+%% Val}, i.e. unhashed values. Since we don't use hashes we return L as
+%% is.
+get_vals({_Ip, Bucket, Pid, _KeyVals}, L) ->
+  [{Key, riak_ops:get(Pid, Bucket, Key, fun resolve/2)} ||
+    {Key, _HashedVal} <- L].
 
-put({Ip, Bucket, Pid, Keys} = S, {Key, Val}) ->
-  riak_ops:put(Pid, Bucket, Key, Val, fun resolve/2),
-  {Ip, Bucket, Pid, [Key | Keys]}.
+%% Store a {Key, Value} pair.
+put({Ip, Bucket, Pid, KeyVals}, {Key, Val}) ->
+  NewVal = riak_ops:put(Pid, Bucket, Key, Val, fun resolve/2),
+  Hash = crypto:hash(sha, term_to_binary(NewVal)),
+  {Ip, Bucket, Pid, dict:store(Key, Hash, KeyVals)}.
 
+%% Cleanup after syncing is done.
 unprep({Ip, Bucket, Pid, _Keys}) ->
   riak_ops:disconnect(Pid),
   {Ip, Bucket, no_pid, no_keys}.
 
 resolve(V1, V2) -> max(V1, V2).
 
-map_keys(Pid, Bucket, Keys) ->
-  BucketKeyPairs = [{Bucket, Key} || Key <- Keys],
-  map(Pid, BucketKeyPairs).
+%% map_keys(Pid, Bucket, Keys) ->
+%%   BucketKeyPairs = [{Bucket, Key} || Key <- Keys],
+%%   map(Pid, BucketKeyPairs).
 
 map(Pid, BucketOrBucketKeyPairs) ->
   F =
@@ -45,7 +55,7 @@ map(Pid, BucketOrBucketKeyPairs) ->
               <<>>  ->
                 [];
               [Val] ->
-                [{riak_object:key(Obj), crypto:sha256(Val)}];
+                [{riak_object:key(Obj), crypto:sha(Val)}];
               _     ->
                 []
             end
@@ -54,10 +64,13 @@ map(Pid, BucketOrBucketKeyPairs) ->
   {Dt, L} =
     timer:tc(
       fun() ->
-          {ok, [{0, L}]} = riakc_pb_socket:mapred(Pid, BucketOrBucketKeyPairs,
-                                                  [{map, {strfun, F}, "myarg",
-                                                    true}],
-                                                  3600000),
+          Res = riakc_pb_socket:mapred(Pid, BucketOrBucketKeyPairs,
+                                          [{map, {strfun, F}, "myarg",
+                                            true}], 3600000),
+          L = case Res of
+                {ok, [{0, X}]} -> X;
+                {ok, []} -> []
+              end,
           L
       end),
   io:format("mapred time: ~ps. length(L): ~p~n", [Dt / (1000 * 1000),

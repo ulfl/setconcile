@@ -19,10 +19,10 @@ serve(_, Req)            -> cowboy_req:reply(405, Req).
 do_op(Op, Req) ->
   {DatasetName0, Req1} = cowboy_req:binding(set, Req),
   DatasetName = binary_to_existing_atom(DatasetName0, utf8),
-  {Peer={_Ip, _Port}, Req2} = cowboy_req:peer(Req1),
-  lager:info("prep_handler (~p): dataset=~p, peer=~p", [Op, DatasetName, Peer]),
+  {{Ip, _Port}, Req2} = cowboy_req:peer(Req1),
+  lager:info("prep_handler (~p): dataset=~p, peer=~p", [Op, DatasetName, Ip]),
   D = misc:local_dataset(DatasetName),
-  B = apply(dataset, Op, [D]),
+  _B = apply(dataset, Op, [D]),
   cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2).
 
 terminate(_Reason, _Req, _State) -> ok.

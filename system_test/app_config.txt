@@ -2,8 +2,8 @@
 [Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
 Node = erlang:list_to_atom(Node1),
 
-NodeA = "52.18.225.108",
-NodeB = "52.7.129.82",
+NodeA = "52.19.7.130",
+NodeB = "52.6.117.106",
 
 %% Determine our node config based on the Erlang node name.
 NodeCfg = case Node of

@@ -17,28 +17,37 @@ setup(Node) ->
   Ds.
 
 %%%_* Helpers ==========================================================
+
+%% Prepare to start syncing.
 prep(State) ->
   L = dict:to_list(State),
   print_dataset(L),
   {size(L, 0), State}.
 
+%% Get the list of {Key, HashedVal} tuples. Since in this dataset the
+%% values are of small size we return the real value and not its hash.
 get(State) -> dict:to_list(State).
 
+%% Given a list L of {Key, HashedVal} tuples, return the list of {Key,
+%% Val}, i.e. unhashed values. Since we don't use hashes we return L as
+%% is.
 get_vals(_State, L) -> L.
 
+%% Store a {Key, Value} pair.
 put(State, {K, V1}) ->
   case dict:find(K, State) of
     error    -> dict:store(K, V1, State);
     {ok, V2} -> dict:store(K, resolve(V1, V2), State)
   end.
 
-resolve(V1, V2) -> max(V1, V2).
-
+%% Cleanup after syncing is done.
 unprep(State) ->
   L = dict:to_list(State),
   verify(L),
   print_dataset(L),
   State.
+
+resolve(V1, V2) -> max(V1, V2).
 
 create() ->
   Base = [{1, v1}, {2, v1}],

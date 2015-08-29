@@ -27,20 +27,20 @@ resource "aws_instance" "replication_node" {
 
     provisioner "file" {
         connection {user = "ubuntu" key_file = "${var.key_file}"}
-        source = "tf_replication_node/riak.patch"
+        source = "${path.module}/riak.patch"
         destination = "riak.patch"
     }
 
     # Unfortunately script is specified relative to root script.
     provisioner "remote-exec" {
         connection {user = "ubuntu" key_file = "${var.key_file}"}
-        script = "tf_replication_node/setup.sh"
+        script = "${path.module}/setup.sh"
     }
 
     # Run separately so that the limits.conf changes are in affect.
     provisioner "remote-exec" {
         connection {user = "ubuntu" key_file = "${var.key_file}"}
-        script = "tf_replication_node/start_riak.sh"
+        script = "${path.module}/start_riak.sh"
     }
 }
 
