@@ -1,9 +1,9 @@
 %% Copyright (c) 2015 Ulf Leopold.
--module(dataset_local).
+-module(ds_local).
 -behaviour(gen_server).
 
 %% API.
--export([start_link/7]).
+-export([new/2]).
 
 %% Gen server callbacks.
 -export([init/1]).
@@ -13,36 +13,37 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
-start_link(Name, State, Prep, Get, GetVals, Put, Unprep) ->
-  gen_server:start_link(?MODULE, [Name, State, Prep, Get, GetVals, Put, Unprep],
-                        []).
+new(Name, {State, Prep, Get, GetVals, Put, Unprep}) ->
+  {ok, Ds} = gen_server:start_link(?MODULE, [Name, State, Prep, Get, GetVals,
+                                             Put, Unprep], []),
+  Ds.
 
 %%%_* Gen server callbacks =============================================
 init([Name, State, Prep, Get, GetVals, Put, Unprep]) ->
-  {ok, #{dataset_name => Name, state => State, prep => Prep, get => Get,
+  {ok, #{ds_name => Name, state => State, prep => Prep, get => Get,
          get_vals => GetVals, put => Put, unprep => Unprep}}.
 
 handle_call(prep, _From, #{state := State, prep := Prep} = S) ->
   {Size, State1} = Prep(State),
   {reply, Size, S#{state := State1}};
-handle_call(get_bloom, _From, #{dataset_name := Name, state := State,
+handle_call(get_bloom, _From, #{ds_name := Name, state := State,
                                 get := Get} = S) ->
   FalseProbability = misc:get_ds_config(Name, bloom_false_probability),
   Bloom = reconcile:create_bloom(Get(State), FalseProbability),
   {reply, {ok, Bloom}, S};
-handle_call({post_transfer, Bloom, Dest}, _From,
-            #{dataset_name := Name, state := State, get := Get,
+handle_call({transfer_missing, Bloom, DestDs}, _From,
+            #{ds_name := Name, state := State, get := Get,
               get_vals := GetVals} = S) ->
   L = reconcile:filter(Get(State), Bloom, []),
   MaxSize = misc:get_ds_config(Name, max_transfer_bundle),
   Size = bundle(L, fun(X) ->
                        X1 = GetVals(State, X),
-                       dataset:post_elements(Dest, X1)
+                       ds:store_elements(DestDs, X1)
                    end,
                 MaxSize),
   {reply, {ok, {length(L), Size}}, S};
-handle_call({post_elements, L}, _From, #{state := State0,
-                                         put := Put} = S) ->
+handle_call({store_elements, L}, _From, #{state := State0,
+                                          put := Put} = S) ->
   State = lists:foldl(fun(X, A) -> Put(A, X) end, State0, L),
   {reply, {ok, byte_size(term_to_binary(L))}, S#{state := State}};
 handle_call(unprep, _From, #{state := State, unprep := Unprep} = S) ->

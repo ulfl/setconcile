@@ -13,9 +13,9 @@ handle(Req, State) ->
   {ok, Req2, State}.
 
 serve(<<"POST">>, Req) ->
-  {Dataset0, Req1} = cowboy_req:binding(set, Req),
-  DatasetName = binary_to_existing_atom(Dataset0, utf8),
-  reconcile:reconcile(DatasetName),
+  {Ds0, Req1} = cowboy_req:binding(set, Req),
+  DsName = binary_to_existing_atom(Ds0, utf8),
+  reconcile:reconcile(DsName),
   cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req1);
 serve(_, Req) ->
   cowboy_req:reply(405, Req).

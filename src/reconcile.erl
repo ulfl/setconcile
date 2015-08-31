@@ -5,61 +5,55 @@
 -export([create_bloom/2]).
 -export([filter/3]).
 
-reconcile(DatasetName) ->
-  LocalDataset = misc:local_dataset(DatasetName),
-  RemoteDataset = misc:remote_dataset(DatasetName),
+reconcile(DsName) ->
+  LocalDs = misc:local_dataset(DsName),
+  RemoteDs = misc:remote_dataset(DsName),
 
   %% Should execute these in parallel since they are potentially
   %% lengthy procedures.
-  DatasetSize = dataset:prep(LocalDataset),
-  dataset:prep(RemoteDataset),
+  DsSize = ds:prep(LocalDs),
+  ds:prep(RemoteDs),
 
-  MaxIts = misc:get_ds_config(DatasetName, max_its),
+  MaxIts = misc:get_ds_config(DsName, max_its),
   {T, {ok, Its, Size, BloomSize}} =
-    timer:tc(fun() -> reconcile(LocalDataset, RemoteDataset, MaxIts) end),
+    timer:tc(fun() -> reconcile(LocalDs, RemoteDs, MaxIts) end),
   lager:info("Done (time=~.2fs, its=~p, data_size=~.2f MB, "
              "bloom_size=~.2f MB)~n", [sec(T), Its, mb(Size), mb(BloomSize)]),
-  lager:info("Size of local dataset (dataset_size=~.2fMB)~n", [mb(DatasetSize)]),
+  lager:info("Size of local dataset (dataset_size=~.2fMB)~n", [mb(DsSize)]),
   lager:info("Ratio of transferred data to dataset size (size_ratio=~.2f)~n",
-             [(Size + BloomSize) / DatasetSize]),
+             [(Size + BloomSize) / DsSize]),
 
-  dataset:unprep(LocalDataset),
-  dataset:unprep(RemoteDataset).
+  ds:unprep(LocalDs),
+  ds:unprep(RemoteDs).
 
-reconcile(LocalDataset, RemoteDataset, MaxIts) ->
-  reconcile(LocalDataset, RemoteDataset, 0, MaxIts, fun converged/2, 0, 0).
+reconcile(LocalDs, RemoteDs, MaxIts) ->
+  reconcile(LocalDs, RemoteDs, 0, MaxIts, fun converged/2, 0, 0).
 
 reconcile(_, _, Its, MaxIts, _Converged, Size, BloomSize) when Its >= MaxIts ->
   {ok, Its, Size, BloomSize};
-reconcile(LocalDataset, RemoteDataset, Its, MaxIts, Converged, Size,
+reconcile(LocalDs, RemoteDs, Its, MaxIts, Converged, Size,
           BloomSize) ->
-  {Dt1, LocalBloom} = timer:tc(fun() -> dataset:get_bloom(LocalDataset) end),
-  lager:info("Calculated local bloom (dt=~.2fs).", [sec(Dt1)]),
-
-  {Dt2, {ReceiveCount, ReceiveSize}} =
-    timer:tc(fun() -> dataset:post_transfer(RemoteDataset, LocalBloom,
-                                            LocalDataset)
-             end),
-  lager:info("Received from remote (num_elements=~p, total_size=~pB, "
-             "dt=~.2fs)~n", [ReceiveCount, ReceiveSize, sec(Dt2)]),
-
-  {Dt3, RemoteBloom} = timer:tc(fun() -> dataset:get_bloom(RemoteDataset) end),
-  lager:info("Calculated remote bloom (dt=~.2fs).", [sec(Dt3)]),
-
-  {Dt4, {SendCount, SendSize}} =
-    timer:tc(fun() -> dataset:post_transfer(LocalDataset, RemoteBloom,
-                                            RemoteDataset)
-             end),
-  lager:info("Transferred to remote (num_elements=~p, total_size=~pB, "
-             "dt=~.2fs)~n", [SendCount, SendSize, sec(Dt4)]),
-
+  {LocalBloom, ReceiveCount, ReceiveSize} = transfer(LocalDs,
+                                                     RemoteDs, "local"),
+  {RemoteBloom, SendCount, SendSize} = transfer(RemoteDs, LocalDs,
+                                                "remote"),
   {MaxIts1, Converged1} = case Converged(ReceiveCount, SendCount) of
-              true  -> {Its + 2, fun(_, _) -> false end};
-              false -> {MaxIts, Converged}
-            end,
-  reconcile(LocalDataset, RemoteDataset, Its + 1, MaxIts1, Converged1,
+                            true  -> {Its + 2, fun(_, _) -> false end};
+                            false -> {MaxIts, Converged}
+                          end,
+  reconcile(LocalDs, RemoteDs, Its + 1, MaxIts1, Converged1,
             Size + ReceiveSize + SendSize,
             BloomSize + bloom_size(LocalBloom) + bloom_size(RemoteBloom)).
+
+transfer(SourceDs, DestDs, Name) ->
+  {Dt1, Bloom} = timer:tc(fun() -> ds:get_bloom(DestDs) end),
+  lager:info("Calculated ~s bloom (dt=~.2fs).", [Name, sec(Dt1)]),
+
+  {Dt2, {SendCount, SendSize}} =
+    timer:tc(fun() -> ds:transfer_missing(SourceDs, Bloom, DestDs) end),
+  lager:info("Transferred elements to ~s (num_elements=~p, total_size=~pB, "
+             "dt=~.2fs)~n", [Name, SendCount, SendSize, sec(Dt2)]),
+  {Bloom, SendCount, SendSize}.
 
 converged(C1, C2) -> C1 + C2 =:= 0.
 

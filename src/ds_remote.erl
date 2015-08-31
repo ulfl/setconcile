@@ -1,5 +1,5 @@
 %% Copyright (c) 2015 Ulf Leopold.
--module(dataset_remote).
+-module(ds_remote).
 
 %% API.
 -export([start_link/3]).
@@ -12,42 +12,42 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
-start_link(Host, Port, DatasetName) ->
-  gen_server:start_link(?MODULE, [Host, Port, DatasetName], []).
+start_link(Host, Port, DsName) ->
+  gen_server:start_link(?MODULE, [Host, Port, DsName], []).
 
 %%%_* Gen server callbacks =============================================
 init([Host, Port, Name]) ->
-  {ok, #{host => Host, port => Port, dataset_name => Name}}.
+  {ok, #{host => Host, port => Port, ds_name => Name}}.
 
 handle_call(ping, _From, #{host := Host, port := Port} = S) ->
   {ok, Body} = http(get, Host, Port, "/api/ping", <<>>, 5000),
   {reply, {ok, Body}, S};
 handle_call(prep, _From, #{host := Host, port := Port,
-                           dataset_name := Name} = S) ->
+                           ds_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_prep),
   http(put, Host, Port, fmt("/api/datasets/~p/prep", [Name]), <<>>, Tmo),
   {reply, ok, S};
 handle_call(get_bloom, _From, #{host := Host, port := Port,
-                                dataset_name := Name} = S) ->
+                                ds_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_get_bloom),
   {ok, Body} = http(get, Host, Port, fmt("/api/datasets/~p/bloom", [Name]),
                     <<>>, Tmo),
   {ok, Bloom} = ebloom:deserialize(Body),
   {reply, {ok, Bloom}, S};
-handle_call({post_transfer, Bloom, _Dest}, _From,
-            #{host := Host, port := Port, dataset_name := Name} = S) ->
-  Tmo = misc:get_ds_config(Name, tmo_post_transfer),
+handle_call({transfer_missing, Bloom, _Dest}, _From,
+            #{host := Host, port := Port, ds_name := Name} = S) ->
+  Tmo = misc:get_ds_config(Name, tmo_transfer_elements),
   {ok, Body} = http(post, Host, Port, fmt("/api/datasets/~p/transfers", [Name]),
                     ebloom:serialize(Bloom), Tmo),
   {reply, {ok, binary_to_term(Body)}, S};
-handle_call({post_elements, L}, _From,
-            #{host := Host, port := Port, dataset_name := Name} = S) ->
-  Tmo = misc:get_ds_config(Name, tmo_post_elements),
+handle_call({store_elements, L}, _From,
+            #{host := Host, port := Port, ds_name := Name} = S) ->
+  Tmo = misc:get_ds_config(Name, tmo_transfer_elements),
   Data = term_to_binary(L),
   http(post, Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
   {reply, {ok, byte_size(Data)}, S};
 handle_call(unprep, _From, #{host := Host, port := Port,
-                             dataset_name := Name} = S) ->
+                             ds_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_unprep),
   http(delete, Host, Port, fmt("/api/datasets/~p/prep", [Name]), <<>>, Tmo),
   {reply, ok, S};

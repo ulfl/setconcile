@@ -13,16 +13,16 @@ handle(Req, State) ->
   {ok, Req2, State}.
 
 serve(<<"POST">>, Req) ->
-  {Dataset0, Req1} = cowboy_req:binding(set, Req),
-  DatasetName = binary_to_existing_atom(Dataset0, utf8),
+  {Ds0, Req1} = cowboy_req:binding(set, Req),
+  DsName = binary_to_existing_atom(Ds0, utf8),
   {ok, Body, Req2} = cowboy_req:body(Req1),
-  LocalDataset = misc:local_dataset(DatasetName),
+  LocalDs = misc:local_dataset(DsName),
   {ok, Bloom} = ebloom:deserialize(Body),
   {{Ip, _Port}, Req3} = cowboy_req:peer(Req2),
-  lager:info("transfers handler: dataset=~p, peer=~p,", [DatasetName, Ip]),
-  RemoteDataset = misc:remote_dataset(DatasetName),
-  {N, Size} = dataset:post_transfer(LocalDataset, Bloom, RemoteDataset),
-  dataset:stop(RemoteDataset),
+  lager:info("transfers handler: dataset=~p, peer=~p,", [DsName, Ip]),
+  RemoteDs = misc:remote_dataset(DsName),
+  {N, Size} = ds:transfer_missing(LocalDs, Bloom, RemoteDs),
+  ds:stop(RemoteDs),
   cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}],
                    term_to_binary({N, Size}), Req3);
 serve(_, Req) ->

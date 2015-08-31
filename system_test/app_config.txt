@@ -2,8 +2,9 @@
 [Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
 Node = erlang:list_to_atom(Node1),
 
-NodeA = "52.19.7.130",
-NodeB = "52.6.117.106",
+NodeA = "52.18.242.136",
+NodeB = "52.1.213.189",
+DbIp = "127.0.0.1",
 
 %% Determine our node config based on the Erlang node name.
 NodeCfg = case Node of
@@ -14,60 +15,57 @@ NodeCfg = case Node of
                    remote_port => 9001, name => b}
           end,
 
-{Symm, SymmExpected} = ds_symm:setup(Node, 100000, 0.2, 1024),
+Seconds = fun(X) -> X * 1000 end,
+Minutes = fun(X) -> X * Seconds(60) end,
+
+Resolver = fun(V1, V2) -> max(V1, V2) end,
 
 #{
    node => NodeCfg,
 
    datasets => #{
      mini => #{
-       dataset                 => ds_mini:setup(Node),
-       tmo_prep                => 1000 * 10,
-       tmo_get_bloom           => 1000 * 10,
-       tmo_post_transfer       => 1000 * 10,
-       tmo_post_elements       => 1000 * 10,
-       tmo_unprep              => 1000 * 10,
+       dataset                 => ds_local:new(mini, dsdl_mini:new(Node)),
+       tmo_prep                => Seconds(10),
+       tmo_get_bloom           => Seconds(10),
+       tmo_transfer_elements   => Seconds(10),
+       tmo_unprep              => Seconds(10),
        max_transfer_bundle     => 100,
        max_its                 => 25,
        bloom_false_probability => 0.5
       },
 
      symm => #{
-       dataset                 => Symm,
-       symm_expected           => SymmExpected,
-       tmo_prep                => 1000 * 3600,
-       tmo_get_bloom           => 1000 * 3600,
-       tmo_post_transfer       => 1000 * 3600,
-       tmo_post_elements       => 1000 * 10,
-       tmo_unprep              => 1000 * 3600,
+       dataset                 => ds_local:new(symm,
+                                    dsdl_symm:new(Node, 100000, 0.2, 1024)),
+       tmo_prep                => Minutes(30),
+       tmo_get_bloom           => Minutes(30),
+       tmo_transfer_elements   => Minutes(30),
+       tmo_unprep              => Minutes(30),
        max_transfer_bundle     => 100,
        max_its                 => 25,
        bloom_false_probability => 0.5
       },
 
      riak_mini => #{
-       dataset                 => ds_riak:setup(riak_mini, "127.0.0.1",
-                                                <<"mini">>),
-       symm_expected           => SymmExpected,
-       tmo_prep                => 1000 * 3600,
-       tmo_get_bloom           => 1000 * 3600,
-       tmo_post_transfer       => 1000 * 3600,
-       tmo_post_elements       => 1000 * 10,
-       tmo_unprep              => 1000 * 3600,
+       dataset                 => ds_local:new(riak_mini,
+                                    dsdl_riak:new(DbIp, <<"mini">>, Resolver)),
+       tmo_prep                => Minutes(30),
+       tmo_get_bloom           => Minutes(30),
+       tmo_transfer_elements   => Minutes(30),
+       tmo_unprep              => Minutes(30),
        max_transfer_bundle     => 100,
        max_its                 => 25,
        bloom_false_probability => 0.5
      },
 
      riak_set_a => #{
-       dataset                 => ds_riak:setup(riak_set_a, "127.0.0.1",
-                                                <<"set_a">>),
-       symm_expected           => SymmExpected,
-       tmo_prep                => 1000 * 3600,
-       tmo_get_bloom           => 1000 * 3600,
-       tmo_post_transfer       => 1000 * 3600,
-       tmo_post_elements       => 1000 * 10,
-       tmo_unprep              => 1000 * 3600,
+       dataset                 => ds_local:new(riak_set_a,
+                                    dsdl_riak:new(DbIp, <<"set_a">>, Resolver)),
+       tmo_prep                => Minutes(30),
+       tmo_get_bloom           => Minutes(30),
+       tmo_transfer_elements   => Minutes(30),
+       tmo_unprep              => Minutes(30),
        max_transfer_bundle     => 100,
        max_its                 => 25,
        bloom_false_probability => 0.5

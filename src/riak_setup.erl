@@ -1,14 +1,14 @@
 -module(riak_setup).
 
--export([setup/5]).
+-export([symm/5]).
 -export([verify/5]).
--export([setup_mini/0]).
+-export([mini/0]).
 -export([clear/2]).
 -export([count/2]).
 -export([keys/2]).
 
-%% i.e. riak_setup:setup("127.0.0.1", <<"set_a">>, 100000, 0.1, 2048).
-setup(Ip, Bucket, N, P, B) ->
+%% i.e. riak_setup:symm("127.0.0.1", <<"set_a">>, 1000, 0.1, 2048).
+symm(Ip, Bucket, N, P, B) ->
   Pid = riak_ops:connect(Ip),
   riak_ops:configure_bucket(Pid, Bucket),
   riak_ops:clear(Pid, Bucket),
@@ -17,7 +17,7 @@ setup(Ip, Bucket, N, P, B) ->
   io:format("Setup time: ~ps~n", [Dt / (1000 * 1000)]),
   ok.
 
-%% i.e. riak_setup:verify("127.0.0.1", <<"set_a">>, 100000, 0.1, 2048).
+%% i.e. riak_setup:verify("127.0.0.1", <<"set_a">>, 1000, 0.1, 2048).
 verify(Ip, Bucket, N, P, B) ->
   Pid = riak_ops:connect(Ip),
   {_, _, Expected} = symmetric_dataset:create(N, P, B),
@@ -26,8 +26,8 @@ verify(Ip, Bucket, N, P, B) ->
               Key <- Keys],
   symmetric_dataset:verify(KeyVals, Expected).
 
-%% riak_setup:setup_mini().
-setup_mini() ->
+%% riak_setup:mini().
+mini() ->
   Ip = "127.0.0.1",
   Bucket = <<"mini">>,
   Pid = riak_ops:connect(Ip),

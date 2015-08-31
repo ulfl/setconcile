@@ -3,8 +3,6 @@
 -export([create/3]).
 -export([verify/2]).
 
--include_lib("eunit/include/eunit.hrl").
-
 %% Return a new dataset of key/value pairs for nodes A and B. For each
 %% node the pairs will have the following characteristics:
 %%
@@ -24,21 +22,33 @@
 %% N*P/4) = 5N*P/4. Transfer_size/dataset_size ratio: (5N*P/4) / (N -
 %% N*P/4) = (5P)/(4-P). With P = 0.2 we get a ratio of 0.26.
 %%
-create(N, P, BulkBytes) when (trunc(N*P) > 0) and (trunc(N*P) rem 4 =:= 0) ->
-  Bulk = <<0:(8 * BulkBytes)>>,
-  BaseSet = base([], N, Bulk),
+create(N, P, NumBulkBytes) when (trunc(N*P) > 0) and
+                                (trunc(N*P) rem 4 =:= 0) and
+                                (NumBulkBytes rem 16 =:= 0) ->
+  random:seed({1, 2, 3}),
+  BaseSet = base([], N, NumBulkBytes),
   {NewOrUpdated, Shared} = lists:split(trunc(N * P), BaseSet),
   {New, Updated} = split_in_two(NewOrUpdated),
   {A, B} = new_or_updated(New, Updated),
   Expected = Shared ++ New ++ update(Updated),
   {A ++ Shared, B ++ Shared, Expected}.
 
-base(L, 0, _Bulk) -> L;
-base(L, N, Bulk)  ->
+base(L, 0, _NumBulkBytes) -> L;
+base(L, N, NumBulkBytes)  ->
   K = crypto:hash(sha256, "ds1" ++ integer_to_list(N)),
-  %K = integer_to_list(N),
+  Seq = list_to_binary(lists:map(fun(_) -> random:uniform(255) end,
+                                 lists:seq(1, 16))),
+  Bulk = generate_bulk(Seq, NumBulkBytes),
   V = {1, Bulk},
-  base([{K, V} | L], N - 1, Bulk).
+  base([{K, V} | L], N - 1, NumBulkBytes).
+
+generate_bulk(Seq, NumBulkBytes) ->
+  generate_bulk(Seq, <<>>, NumBulkBytes div 16).
+
+generate_bulk(_Seq, Acc, 0) ->
+  Acc;
+generate_bulk(Seq, Acc, Repeat) ->
+  generate_bulk(Seq, <<Acc/binary, Seq/binary>>, Repeat - 1).
 
 new_or_updated(New, Updated) ->
   {UniqueA, UniqueB} = split_in_two(New),
@@ -51,10 +61,10 @@ split_in_two(L) -> lists:split(trunc(length(L) / 2), L).
 
 update(L) -> [{K, {Time + 1, Bulk}} || {K, {Time, Bulk}} <- L].
 
-verify(CurrentDataset, Expected) ->
+verify(Elements, ExpectedElements) ->
   lager:info("num_elements_current=~p, num_elements_expected=~p",
-             [length(CurrentDataset), length(Expected)]),
-  compare(lists:sort(CurrentDataset), lists:sort(Expected)).
+             [length(Elements), length(ExpectedElements)]),
+  compare(lists:sort(Elements), lists:sort(ExpectedElements)).
 
 compare([], []) ->
   lager:info("Correct!~n", []),
@@ -69,6 +79,3 @@ compare([H1|L1], [H2|L2]) ->
     false -> lager:info("Incorrect. Elements ~p and ~p don't match!~n",
                         [H1, H2])
   end.
-
-size([], Size)      -> Size;
-size([H | T], Size) -> size(T, Size + byte_size(term_to_binary(H))).
