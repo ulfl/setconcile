@@ -13,8 +13,12 @@ new(DbIp, Bucket, Resolver) ->
 prep({Ip, Bucket, Resolver, _, _}) ->
   Pid = riak_ops:connect(Ip),
   DoPrep = fun() ->
-               KeyVals = map(Pid, Bucket),
-               {dict:from_list(KeyVals), 1}
+               KeyValsSize = map(Pid, Bucket),
+               {KV, Size} = lists:foldl(
+                              fun({Key, Size, Val}, {KeyVals, TotalSize}) ->
+                                  {[{Key, Val} | KeyVals], Size + TotalSize}
+                              end, {[], 0}, KeyValsSize),
+               {dict:from_list(KV), Size}
            end,
   {Dt, {KeyVals, Size}} = timer:tc(fun() -> DoPrep() end),
   lager:info("dsdl_riak: prep: num_elements=~p, size=~p, prep_time=~p",
@@ -52,7 +56,8 @@ map(Pid, BucketOrBucketKeyPairs) ->
               <<>>  ->
                 [];
               [Val] ->
-                [{riak_object:key(Obj), crypto:sha(Val)}];
+                Bin = term_to_binary(Val),
+                [{riak_object:key(Obj), byte_size(Bin), crypto:sha(Bin)}];
               _     ->
                 []
             end
