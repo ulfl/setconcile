@@ -18,7 +18,7 @@ connect(Ip) ->
 disconnect(Pid) -> ok = riakc_pb_socket:stop(Pid).
 
 configure_bucket(Pid, Bucket) ->
-  riakc_pb_socket:set_bucket(Pid, Bucket, [{n_val, 5}, {allow_mult, true}]).
+  riakc_pb_socket:set_bucket(Pid, Bucket, [{n_val, 1}, {allow_mult, true}]).
 
 keys(Pid, Bucket) ->
   {ok, L} = riakc_pb_socket:list_keys(Pid, Bucket),

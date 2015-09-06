@@ -22,7 +22,10 @@ do_op(Op, Req) ->
   {{Ip, _Port}, Req2} = cowboy_req:peer(Req1),
   lager:info("prep_handler (~p): dataset=~p, peer=~p", [Op, DsName, Ip]),
   D = misc:local_dataset(DsName),
-  _B = apply(dataset, Op, [D]),
+  case Op of
+    prep -> ds:prep(D);
+    unprep -> ds:unprep(D)
+  end,
   cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2).
 
 terminate(_Reason, _Req, _State) -> ok.
