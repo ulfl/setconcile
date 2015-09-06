@@ -1,0 +1,13 @@
+*** /etc/riak/app.config~       2013-06-21 18:36:11.000000000 +0000
+--- /etc/riak/app.config        2015-08-16 12:26:06.556080000 +0000
+***************
+*** 82,87 ****
+--- 82,89 ----
+
+   %% Riak KV config
+   {riak_kv, [
++            {allow_strfun, true},
++ 
+              %% Storage_backend specifies the Erlang module defining the storage
+              %% mechanism that will be used on this node.
+              {storage_backend, riak_kv_bitcask_backend},

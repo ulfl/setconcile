@@ -12,10 +12,14 @@ new(DbIp, Bucket, Resolver) ->
 %% Prepare to start syncing.
 prep({Ip, Bucket, Resolver, _, _}) ->
   Pid = riak_ops:connect(Ip),
-  KeyVals0 = map(Pid, Bucket),
+  KeyValsSize = map(Pid, Bucket),
+  {KeyVals0, Size} = lists:foldl(
+                       fun({Key, Size, Val}, {KeyVals, TotalSize}) ->
+                           {[{Key, Val} | KeyVals], Size + TotalSize}
+                       end, {[], 0}, KeyValsSize),
   KeyVals = dict:from_list(KeyVals0),
-  lager:info("dsdl_riak: prep: num_elements=~p", [dict:size(KeyVals)]),
-  Size = 1, % Could calculate ds size.
+  lager:info("dsdl_riak: prep: num_elements=~p, size=~p", [dict:size(KeyVals),
+                                                           Size]),
   {Size, {Ip, Bucket, Resolver, Pid, KeyVals}}.
 
 %% Get the list of {Key, HashedVal} tuples.
@@ -49,7 +53,8 @@ map(Pid, BucketOrBucketKeyPairs) ->
               <<>>  ->
                 [];
               [Val] ->
-                [{riak_object:key(Obj), crypto:sha(Val)}];
+                Bin = term_to_binary(Val),
+                [{riak_object:key(Obj), byte_size(Bin), crypto:sha(Bin)}];
               _     ->
                 []
             end
@@ -59,8 +64,8 @@ map(Pid, BucketOrBucketKeyPairs) ->
     timer:tc(
       fun() ->
           Res = riakc_pb_socket:mapred(Pid, BucketOrBucketKeyPairs,
-                                          [{map, {strfun, F}, "myarg",
-                                            true}], 3600000),
+                                       [{map, {strfun, F}, "myarg",
+                                         true}], 3600000),
           L = case Res of
                 {ok, [{0, X}]} -> X;
                 {ok, []} -> []
