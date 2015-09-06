@@ -8,11 +8,13 @@
 reconcile(DsName) ->
   LocalDs = misc:local_dataset(DsName),
   RemoteDs = misc:remote_dataset(DsName),
-
-  %% Should execute these in parallel since they are potentially
-  %% lengthy procedures.
-  DsSize = ds:prep(LocalDs),
-  ds:prep(RemoteDs),
+  
+  %% Prep both sides simultaneously.
+  lager:info("Prepping datasets for sync.~n", []),
+  [DsSize, _] = plists:map(fun(F) -> F() end,
+                           [fun() -> ds:prep(LocalDs) end,
+                            fun() -> ds:prep(RemoteDs) end],
+                           {processes, 2}),
 
   MaxIts = misc:get_ds_config(DsName, max_its),
   {T, {ok, Its, Size, BloomSize}} =
