@@ -6,13 +6,14 @@
 -export([clear/2]).
 -export([count/2]).
 -export([keys/2]).
+-export([nuclear/0]).
 
 %% i.e. riak_setup:symm("127.0.0.1", <<"set_a">>, 1000, 0.1, 2048).
 symm(Ip, Bucket, N, P, B) ->
+  nuclear(),
   Pid = riak_ops:connect(Ip),
   riak_ops:configure_bucket(Pid, Bucket),
-  riak_ops:clear(Pid, Bucket),
-  timer:sleep(5000),
+  io:format("Creating objects~n", []),
   {Dt, _} = timer:tc(fun() -> create_objects(Pid, Bucket, N, P, B) end),
   io:format("Setup time: ~ps~n", [Dt / (1000 * 1000)]),
   ok.
@@ -51,6 +52,13 @@ clear(Ip, Bucket) ->
   Pid = riak_ops:connect(Ip),
   riak_ops:clear(Pid, Bucket),
   ok.
+
+nuclear() ->
+  os:cmd("sudo -H -u riak riak stop"),
+  os:cmd("sudo rm -rf /var/lib/riak/bitcask/*"),
+  os:cmd("sudo -H -u riak riak start"),
+  timer:sleep(1000),
+  "pong\n" = os:cmd("sudo -H -u riak riak ping").
 
 %% i.e. riak_setup:count("127.0.0.1", <<"set_a">>).
 count(Ip, Bucket) ->
