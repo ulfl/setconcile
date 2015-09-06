@@ -6,6 +6,7 @@
 -export([clear/2]).
 -export([count/2]).
 -export([keys/2]).
+-export([get/3]).
 -export([nuclear/0]).
 
 %% i.e. riak_setup:symm("127.0.0.1", <<"set_a">>, 1000, 0.1, 2048).
@@ -70,6 +71,11 @@ count(Ip, Bucket) ->
 keys(Ip, Bucket) ->
   Pid = riak_ops:connect(Ip),
   riak_ops:keys(Pid, Bucket).
+
+%% i.e. riak_setup:get("127.0.0.1", <<"set_a">>, <<"key">>).
+get(Ip, Bucket, Key) ->
+  Pid = riak_ops:connect(Ip),
+  riak_ops:get(Pid, Bucket, Key, fun(_, _) -> error(sibling) end).
 
 %%%_* Internal =========================================================
 create_objects(Pid, Bucket, N, P, B) ->
