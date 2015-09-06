@@ -12,14 +12,17 @@ new(DbIp, Bucket, Resolver) ->
 %% Prepare to start syncing.
 prep({Ip, Bucket, Resolver, _, _}) ->
   Pid = riak_ops:connect(Ip),
-  KeyValsSize = map(Pid, Bucket),
-  {KeyVals0, Size} = lists:foldl(
-                       fun({Key, Size, Val}, {KeyVals, TotalSize}) ->
-                           {[{Key, Val} | KeyVals], Size + TotalSize}
-                       end, {[], 0}, KeyValsSize),
-  KeyVals = dict:from_list(KeyVals0),
-  lager:info("dsdl_riak: prep: num_elements=~p, size=~p", [dict:size(KeyVals),
-                                                           Size]),
+  DoPrep = fun() ->
+               KeyValsSize = map(Pid, Bucket),
+               {KV, Size} = lists:foldl(
+                              fun({Key, Size, Val}, {KeyVals, TotalSize}) ->
+                                  {[{Key, Val} | KeyVals], Size + TotalSize}
+                              end, {[], 0}, KeyValsSize),
+               {dict:from_list(KV), Size}
+           end,
+  {Dt, {KeyVals, Size}} = timer:tc(fun() -> DoPrep() end),
+  lager:info("dsdl_riak: prep: num_elements=~p, size=~p, prep_time=~p",
+             [dict:size(KeyVals), Size, Dt / (1000 * 1000)]),
   {Size, {Ip, Bucket, Resolver, Pid, KeyVals}}.
 
 %% Get the list of {Key, HashedVal} tuples.
