@@ -1,3 +1,4 @@
+%% Copyright (c) 2015 Ulf Leopold.os
 -module(riak_ops).
 
 -export([connect/1]).

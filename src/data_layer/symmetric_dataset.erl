@@ -1,3 +1,4 @@
+%% Copyright (c) 2015 Ulf Leopold.
 -module(symmetric_dataset).
 
 -export([create/3]).

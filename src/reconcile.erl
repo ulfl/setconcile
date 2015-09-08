@@ -10,54 +10,66 @@ reconcile(DsName) ->
   RemoteDs = misc:remote_dataset(DsName),
   
   %% Prep both sides simultaneously.
-  lager:info("Prepping datasets for sync.~n", []),
-  [DsSize, _] = plists:map(fun(F) -> F() end,
-                           [fun() -> ds:prep(LocalDs) end,
-                            fun() -> ds:prep(RemoteDs) end],
-                           {processes, 2}),
+  lager:info("Prepping dataset for sync (dataset=~p).~n", [DsName]),
+  {PrepTime, [DsSize, _]} =
+    timer:tc(fun() ->
+                 plists:map(fun(F) -> F() end,
+                            [fun() -> ds:prep(LocalDs) end,
+                             fun() -> ds:prep(RemoteDs) end],
+                            {processes, 2})
+             end),
+  lager:info("Prepping done time=~.2fs.~n", [sec(PrepTime)]),
 
-  MaxIts = misc:get_ds_config(DsName, max_its),
-  {T, {ok, Its, Size, BloomSize}} =
-    timer:tc(fun() -> reconcile(LocalDs, RemoteDs, MaxIts) end),
-  lager:info("Done (time=~.2fs, its=~p, data_size=~.2f MB, "
-             "bloom_size=~.2f MB)~n", [sec(T), Its, mb(Size), mb(BloomSize)]),
-  lager:info("Size of local dataset (dataset_size=~.2fMB)~n", [mb(DsSize)]),
-  lager:info("Ratio of transferred data to dataset size (size_ratio=~.2f)~n",
-             [(Size + BloomSize) / DsSize]),
+  Converged = misc:get_ds_config(DsName, converged),
+  {RecTime, {ok, Its, Stats}} =
+    timer:tc(fun() -> reconcile(DsName, LocalDs, RemoteDs, Converged) end),
+
+  #{data_size := DataSize, bloom_size := BloomSize, tx_cnt := TxCnt,
+    rx_cnt := RxCnt} = Stats,
+  lager:info("Reconciliation done (dataset=~p, time=~.2fs, its=~p, "
+             "data_size=~.2f MB, bloom_size=~.2f MB, tx_cnt=~p, rx_cnt=~p)~n", 
+             [DsName, sec(RecTime), Its, mb(DataSize), mb(BloomSize), TxCnt, 
+              RxCnt]),
+  lager:info("Size of local dataset (dataset=~p, dataset_size=~.2fMB)~n", 
+             [DsName, mb(DsSize)]),
+  lager:info("Ratio of transferred data to dataset size (dataset=~p, "
+             "size_ratio=~.2f)~n", [DsName, (DataSize + BloomSize) / DsSize]),
 
   ds:unprep(LocalDs),
   ds:unprep(RemoteDs).
 
-reconcile(LocalDs, RemoteDs, MaxIts) ->
-  reconcile(LocalDs, RemoteDs, 0, MaxIts, fun converged/2, 0, 0).
+reconcile(DsName, LocalDs, RemoteDs, Converged) ->
+  MaxIts = 25,
+  Stats = #{data_size => 0, bloom_size => 0, tx_cnt => 0, rx_cnt => 0},
+  reconcile(DsName, LocalDs, RemoteDs, 0, MaxIts, Converged, Stats).
 
-reconcile(_, _, Its, MaxIts, _Converged, Size, BloomSize) when Its >= MaxIts ->
-  {ok, Its, Size, BloomSize};
-reconcile(LocalDs, RemoteDs, Its, MaxIts, Converged, Size,
-          BloomSize) ->
-  {LocalBloom, ReceiveCount, ReceiveSize} = transfer(LocalDs,
-                                                     RemoteDs, "local"),
-  {RemoteBloom, SendCount, SendSize} = transfer(RemoteDs, LocalDs,
-                                                "remote"),
-  {MaxIts1, Converged1} = case Converged(ReceiveCount, SendCount) of
-                            true  -> {Its + 2, fun(_, _) -> false end};
+reconcile(_, _, _, Its, MaxIts, _Converged, Stats) when Its >= MaxIts ->
+  {ok, Its, Stats};
+reconcile(DsName, LocalDs, RemoteDs, Its, MaxIts, Converged, Stats0) ->
+  {LocalBloom, RxCnt, RxSize} = transfer(DsName, LocalDs, RemoteDs, "remote"),
+  {RemoteBloom, TxCnt, TxSize} = transfer(DsName, RemoteDs, LocalDs, "local"),
+  {MaxIts1, Converged1} = case Converged(Its, TxCnt, RxCnt) of
+                            true  -> {Its + 2, fun(_, _, _) -> false end};
                             false -> {MaxIts, Converged}
                           end,
-  reconcile(LocalDs, RemoteDs, Its + 1, MaxIts1, Converged1,
-            Size + ReceiveSize + SendSize,
-            BloomSize + bloom_size(LocalBloom) + bloom_size(RemoteBloom)).
+  Stats = Stats0#{data_size := maps:get(data_size, Stats0) + RxSize + TxSize,
+                  bloom_size := maps:get(bloom_size, Stats0) +
+                    bloom_size(LocalBloom) + bloom_size(RemoteBloom),
+                  tx_cnt := maps:get(tx_cnt, Stats0) + TxCnt,
+                  rx_cnt := maps:get(rx_cnt, Stats0) + RxCnt},
+  reconcile(DsName, LocalDs, RemoteDs, Its + 1, MaxIts1, Converged1, Stats).
 
-transfer(SourceDs, DestDs, Name) ->
+transfer(DsName, SourceDs, DestDs, DestStr) ->
   {Dt1, Bloom} = timer:tc(fun() -> ds:get_bloom(DestDs) end),
-  lager:info("Calculated ~s bloom (dt=~.2fs).", [Name, sec(Dt1)]),
+  lager:info("Calculated ~s bloom (dataset=~p, dt=~.2fs).", [DestStr, DsName,
+                                                             sec(Dt1)]),
 
-  {Dt2, {SendCount, SendSize}} =
+  {Dt2, {Cnt, Size}} =
     timer:tc(fun() -> ds:transfer_missing(SourceDs, Bloom, DestDs) end),
-  lager:info("Transferred elements to ~s (num_elements=~p, total_size=~pB, "
-             "dt=~.2fs)~n", [Name, SendCount, SendSize, sec(Dt2)]),
-  {Bloom, SendCount, SendSize}.
-
-converged(C1, C2) -> C1 + C2 =:= 0.
+  lager:info("Transferred elements to ~s (dataset=~p, num_elements=~p, "
+             "total_size=~pB, dt=~.2fs)~n", [DestStr, DsName, Cnt, Size, 
+                                             sec(Dt2)]),
+  {Bloom, Cnt, Size}.
 
 bloom_size(B) -> byte_size(ebloom:serialize(B)).
 

@@ -2,8 +2,8 @@
 [Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
 Node = erlang:list_to_atom(Node1),
 
-NodeA = "52.16.199.126",
-NodeB = "54.210.0.221",
+NodeA = "52.19.114.149",
+NodeB = "54.208.197.185",
 DbIp = "127.0.0.1",
 
 %% Determine our node config based on the Erlang node name.
@@ -20,6 +20,9 @@ Minutes = fun(X) -> X * Seconds(60) end,
 
 Resolver = fun(V1, V2) -> max(V1, V2) end,
 
+Converged = fun(Its, TxCnt, RxCnt) ->
+                (Its > 20) or ((TxCnt + RxCnt) =:= 0) end,
+
 #{
    node => NodeCfg,
 
@@ -31,44 +34,44 @@ Resolver = fun(V1, V2) -> max(V1, V2) end,
        tmo_transfer_elements   => Seconds(10),
        tmo_unprep              => Seconds(10),
        max_transfer_bundle     => 100,
-       max_its                 => 25,
+       converged               => Converged,
        bloom_false_probability => 0.5
       },
 
      symm => #{
        dataset                 => ds_local:new(symm,
-                                    dsdl_symm:new(Node, 100000, 0.2, 1024)),
+                                               dsdl_symm:new(Node, 100000, 0.2, 1024)),
        tmo_prep                => Minutes(30),
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
        tmo_unprep              => Minutes(30),
        max_transfer_bundle     => 100,
-       max_its                 => 25,
+       converged               => Converged,
        bloom_false_probability => 0.5
       },
 
      riak_mini => #{
        dataset                 => ds_local:new(riak_mini,
-                                    dsdl_riak:new(DbIp, <<"mini">>, Resolver)),
+                                               dsdl_riak:new(DbIp, <<"mini">>, Resolver)),
        tmo_prep                => Minutes(30),
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
        tmo_unprep              => Minutes(30),
        max_transfer_bundle     => 100,
-       max_its                 => 25,
+       converged               => Converged,
        bloom_false_probability => 0.5
-     },
+      },
 
      riak_set_a => #{
        dataset                 => ds_local:new(riak_set_a,
-                                    dsdl_riak:new(DbIp, <<"set_a">>, Resolver)),
+                                               dsdl_riak:new(DbIp, <<"set_a">>, Resolver)),
        tmo_prep                => Minutes(30),
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
        tmo_unprep              => Minutes(30),
        max_transfer_bundle     => 100,
-       max_its                 => 25,
+       converged               => Converged,
        bloom_false_probability => 0.5
-     }
-   }
-}.
+      }
+    }
+ }.

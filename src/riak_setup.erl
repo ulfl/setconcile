@@ -1,3 +1,4 @@
+%% Copyright (c) 2015 Ulf Leopold.
 -module(riak_setup).
 
 -export([symm/5]).
