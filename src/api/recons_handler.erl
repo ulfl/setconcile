@@ -15,8 +15,9 @@ handle(Req, State) ->
 serve(<<"POST">>, Req) ->
   {Ds0, Req1} = cowboy_req:binding(set, Req),
   DsName = binary_to_existing_atom(Ds0, utf8),
-  reconcile:reconcile(DsName),
-  cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req1);
+  Res = reconcile:reconcile(DsName),
+  Json = jsx:encode(Res),
+  cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], Json, Req1);
 serve(_, Req) ->
   cowboy_req:reply(405, Req).
 

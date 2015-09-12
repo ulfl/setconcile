@@ -32,7 +32,11 @@ start(_Type, _Args) ->
                        {"/api/datasets/:set/transfers", transfers_handler, []},
 
                        %% POST elements to be included in the given set.
-                       {"/api/datasets/:set", element_handler, []}
+                       {"/api/datasets/:set", element_handler, []},
+ 
+                       %% Debug interface.
+                       {"/api/debug/setup_db/", setup_db_handler, []},
+                       {"/api/debug/config/", config_handler, []}
                       ]}
                ]),
 

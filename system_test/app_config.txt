@@ -2,8 +2,8 @@
 [Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
 Node = erlang:list_to_atom(Node1),
 
-NodeA = "52.19.114.149",
-NodeB = "54.208.197.185",
+NodeA = "52.18.165.197",
+NodeB = "54.175.148.223",
 DbIp = "127.0.0.1",
 
 %% Determine our node config based on the Erlang node name.

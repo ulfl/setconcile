@@ -36,7 +36,9 @@ reconcile(DsName) ->
              "size_ratio=~.2f)~n", [DsName, (DataSize + BloomSize) / DsSize]),
 
   ds:unprep(LocalDs),
-  ds:unprep(RemoteDs).
+  ds:unprep(RemoteDs),
+  Stats#{its => Its, ds_size => DsSize, prep_time => PrepTime,
+         rec_time => RecTime}.
 
 reconcile(DsName, LocalDs, RemoteDs, Converged) ->
   MaxIts = 25,

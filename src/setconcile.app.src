@@ -12,6 +12,7 @@
                   folsom,
                   config,
                   ebloom,
+                  jsx,
                   riakc,
                   hackney,
                   cowboy
