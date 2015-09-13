@@ -8,7 +8,7 @@
 reconcile(DsName) ->
   LocalDs = misc:local_dataset(DsName),
   RemoteDs = misc:remote_dataset(DsName),
-  
+
   %% Prep both sides simultaneously.
   lager:info("Prepping dataset for sync (dataset=~p).~n", [DsName]),
   {PrepTime, [DsSize, _]} =
@@ -18,7 +18,7 @@ reconcile(DsName) ->
                              fun() -> ds:prep(RemoteDs) end],
                             {processes, 2})
              end),
-  lager:info("Prepping done time=~.2fs.~n", [sec(PrepTime)]),
+  lager:info("Prepping done (time=~.2fs)~n", [sec(PrepTime)]),
 
   Converged = misc:get_ds_config(DsName, converged),
   {RecTime, {ok, Its, Stats}} =
