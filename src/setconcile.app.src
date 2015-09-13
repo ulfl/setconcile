@@ -13,6 +13,7 @@
                   config,
                   ebloom,
                   jsx,
+                  erlcron,
                   riakc,
                   hackney,
                   cowboy

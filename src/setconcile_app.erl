@@ -4,6 +4,7 @@
 
 -export([start/2]).
 -export([stop/1]).
+-export([init/1]).
 
 start(_Type, _Args) ->
   Dispatch = cowboy_router:compile(
@@ -33,7 +34,7 @@ start(_Type, _Args) ->
 
                        %% POST elements to be included in the given set.
                        {"/api/datasets/:set", element_handler, []},
- 
+
                        %% Debug interface.
                        {"/api/debug/setup_db/", setup_db_handler, []},
                        {"/api/debug/config/", config_handler, []}
@@ -48,7 +49,23 @@ start(_Type, _Args) ->
   {ok, _} = cowboy:start_http(http, 100, [{port, Port}],
                               [{env, [{dispatch, Dispatch}]},
                                {max_keepalive,  1000},
-                               {timeout, 60 * 1000}]).
+                               {timeout, 60 * 1000}]),
+
+  misc:foreach_ds_config(
+    fun(DatasetName, Config) ->
+        Schedule = maps:get(schedule, Config, false),
+        case Schedule of
+          false -> ok;
+          _     ->
+            lager:info("Sceduling sync for ~p: ~p", [DatasetName, Schedule]),
+            erlcron:cron({Schedule, {reconcile, reconcile, [DatasetName]}})
+        end
+    end),
+
+  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 stop(_State) ->
   ok.
+
+%% No children of the supervisor.
+init([]) -> {ok, {{one_for_one,3,10},[]}}.

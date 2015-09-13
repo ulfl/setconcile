@@ -15,6 +15,12 @@ NodeCfg = case Node of
                    remote_port => 7363, name => b}
           end,
 
+%% Determine the sync schedule.
+Schedule = case Node of
+            a -> {daily, [{10, 00, am}, {10, 00, pm}]};
+            b -> false
+          end,
+
 Seconds = fun(X) -> X * 1000 end,
 Minutes = fun(X) -> X * Seconds(60) end,
 
@@ -40,7 +46,8 @@ Converged = fun(Its, TxCnt, RxCnt) ->
 
      symm => #{
        dataset                 => ds_local:new(symm,
-                                               dsdl_symm:new(Node, 100000, 0.2, 1024)),
+                                               dsdl_symm:new(Node, 100000, 0.2,
+                                                             1024)),
        tmo_prep                => Minutes(30),
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
@@ -52,7 +59,8 @@ Converged = fun(Its, TxCnt, RxCnt) ->
 
      riak_mini => #{
        dataset                 => ds_local:new(riak_mini,
-                                               dsdl_riak:new(DbIp, <<"mini">>, Resolver)),
+                                               dsdl_riak:new(DbIp, <<"mini">>,
+                                                             Resolver)),
        tmo_prep                => Minutes(30),
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
@@ -64,7 +72,9 @@ Converged = fun(Its, TxCnt, RxCnt) ->
 
      riak_set_a => #{
        dataset                 => ds_local:new(riak_set_a,
-                                               dsdl_riak:new(DbIp, <<"set_a">>, Resolver)),
+                                               dsdl_riak:new(DbIp, <<"set_a">>,
+                                                             Resolver)),
+       schedule                => Schedule,
        tmo_prep                => Minutes(30),
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
