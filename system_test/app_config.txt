@@ -17,7 +17,7 @@ NodeCfg = case Node of
 
 %% Determine the sync schedule.
 Schedule = case Node of
-            a -> {daily, [{10, 00, am}, {10, 00, pm}]};
+            a -> false; %% {daily, [{10, 00, am}, {10, 00, pm}]};
             b -> false
           end,
 

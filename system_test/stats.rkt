@@ -107,7 +107,7 @@
   (for ((p (in-list (list 0.001 0.01 0.1 0.99))))
     (printf "Testing with p=~a~n" p)
     (sleep 1)
-    (test/log 4000 p 4096))
+    (test/log 1000000 p 4096))
   (beep))
 
 (define (pmap f xs)
