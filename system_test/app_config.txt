@@ -8,11 +8,11 @@ DbIp = "127.0.0.1",
 
 %% Determine our node config based on the Erlang node name.
 NodeCfg = case Node of
-            a -> #{port => 9001, remote_host => NodeB,
-                   remote_port => 9001, name => a};
+            a -> #{port => 7363, remote_host => NodeB,
+                   remote_port => 7363, name => a};
 
-            b -> #{port => 9001, remote_host => NodeA,
-                   remote_port => 9001, name => b}
+            b -> #{port => 7363, remote_host => NodeA,
+                   remote_port => 7363, name => b}
           end,
 
 Seconds = fun(X) -> X * 1000 end,

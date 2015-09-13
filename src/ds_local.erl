@@ -36,10 +36,7 @@ handle_call({transfer_missing, Bloom, DestDs}, _From,
               get_vals := GetVals} = S) ->
   L = reconcile:filter(Get(State), Bloom, []),
   MaxSize = misc:get_ds_config(Name, max_transfer_bundle),
-  Size = bundle(L, fun(X) ->
-                       X1 = GetVals(State, X),
-                       ds:store_elements(DestDs, X1)
-                   end,
+  Size = bundle(L, fun(X) -> ds:store_elements(DestDs, GetVals(State, X)) end,
                 MaxSize),
   {reply, {ok, {length(L), Size}}, S};
 handle_call({store_elements, L}, _From, #{state := State0,

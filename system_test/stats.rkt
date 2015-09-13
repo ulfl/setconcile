@@ -15,7 +15,7 @@
 
 (define (ping ip)
   (let*-values (((status headers in)
-                 (http-sendrecv ip (format "/api/ping") #:port 9001 #:method "GET"))
+                 (http-sendrecv ip (format "/api/ping") #:port 7363 #:method "GET"))
                 ((res)
                  (port->string in)))
     (unless (string=? res "ok")
@@ -23,18 +23,18 @@
 
 (define (setup-db ip n p bb)
   (http-sendrecv ip (format "/api/debug/setup_db?n=~a&p=~a&bb=~a" n p bb)
-                 #:port 9001 #:method "POST")
+                 #:port 7363 #:method "POST")
   'ok)
 
 (define (config-bloom ip bloom-false-probability)
   (http-sendrecv
    ip (format "/api/debug/config?ds=riak_set_a&bloom_false_probability=~a"
               (~r bloom-false-probability #:precision '(= 3)))
-   #:port 9001 #:method "POST"))
+   #:port 7363 #:method "POST"))
 
 (define (reconcile ip)
   (let-values (((status headers in)
-                (http-sendrecv ip "/api/datasets/riak_set_a/recons" #:port 9001
+                (http-sendrecv ip "/api/datasets/riak_set_a/recons" #:port 7363
                                #:method "POST")))
     (read-json in)))
 
@@ -56,12 +56,14 @@
 (define (ms->s ms) (exact->inexact (/ ms 1000)))
 (define (precision x) (~r x #:precision '(= 3)))
 
-(define (test n p bulk (range #f) (samples 3))
-  (printf "false-probability, transfer-ratio, bloom-size, its, time~n")
+(define (test outf n p bulk (range #f) (samples 3))
+  (fprintf outf "false-probability, transfer-ratio, bloom-size, its, time~n")
   (let ((a (node-a))
         (b (node-b)))
     (for ((bloom-false-probability (or range (in-range 0.001 0.9 0.1))))
+      (printf " false-probability=~a~n" bloom-false-probability)
       (for ((tries (in-range 0 samples)))
+        (printf "  sample=~a~n" tries)
         (ping a)
         (ping b)
         (config-bloom a bloom-false-probability)
@@ -70,15 +72,16 @@
         (sleep 1)
         (let ((res (reconcile a)))
           ;; FIXME: Add verification of result.
-          (displayln (assemble-result bloom-false-probability res))
-          (flush-output))))))
+          (displayln (assemble-result bloom-false-probability res) outf)
+          (flush-output outf))))))
 
 (define (test/log n p bulk (range #f) (samples 3))
   (let* ((file (file-name n p bulk))
          (dt (match/values
                  (time-apply (lambda ()
-                               (with-output-to-file file
-                                 (lambda() (test n p bulk range samples))))
+                               (call-with-output-file file
+                                 (lambda (outf)
+                                   (test outf n p bulk range samples))))
                              '())
                ((_ _ dt _) dt))))
     (cmd (format "./plot.R ~s ~s" file
@@ -101,9 +104,10 @@
 (define (quick2) (test/log 400 0.1 16 (in-range 0.001 0.9 0.1) 1))
 
 (define (all)
-  (for ((p (in-list (list 0.01 0.05 0.1 0.2 0.8 0.9))))
-    (printf "running p=~a~n" p)
-    (test/log 100000 p 4096))
+  (for ((p (in-list (list 0.001 0.01 0.1 0.99))))
+    (printf "Testing with p=~a~n" p)
+    (sleep 1)
+    (test/log 4000 p 4096))
   (beep))
 
 (define (pmap f xs)
