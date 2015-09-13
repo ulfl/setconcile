@@ -18,6 +18,7 @@ symm(Ip, Bucket, N, P, B) ->
   io:format("Creating objects~n", []),
   {Dt, _} = timer:tc(fun() -> create_objects(Pid, Bucket, N, P, B) end),
   io:format("Setup time: ~ps~n", [Dt / (1000 * 1000)]),
+  riak_ops:disconnect(Pid),
   ok.
 
 %% i.e. riak_setup:verify("127.0.0.1", <<"set_a">>, 1000, 0.1, 2048).
@@ -27,6 +28,7 @@ verify(Ip, Bucket, N, P, B) ->
   Keys = riak_ops:keys(Pid, Bucket),
   KeyVals = [{Key, riak_ops:get(Pid, Bucket, Key, fun() -> error(sibling) end)} ||
               Key <- Keys],
+  riak_ops:disconnect(Pid),
   symmetric_dataset:verify(KeyVals, Expected).
 
 %% riak_setup:mini().
@@ -47,12 +49,14 @@ mini() ->
       riak_ops:put(Pid, Bucket, "key1", 2, Resolve),
       riak_ops:put(Pid, Bucket, "key2", 1, Resolve),
       riak_ops:put(Pid, Bucket, "key_b", 1, Resolve)
-  end.
+  end,
+  riak_ops:disconnect(Pid).
 
 %% i.e. riak_setup:clear("127.0.0.1", <<"set_a">>).
 clear(Ip, Bucket) ->
   Pid = riak_ops:connect(Ip),
   riak_ops:clear(Pid, Bucket),
+  riak_ops:disconnect(Pid),
   ok.
 
 nuclear() ->
@@ -66,17 +70,22 @@ nuclear() ->
 count(Ip, Bucket) ->
   Pid = riak_ops:connect(Ip),
   io:format("Object in bucket: ~p~n", [riak_ops:count(Pid, Bucket)]),
+  riak_ops:disconnect(Pid),
   ok.
 
 %% i.e. riak_setup:keys("127.0.0.1", <<"set_a">>).
 keys(Ip, Bucket) ->
   Pid = riak_ops:connect(Ip),
-  riak_ops:keys(Pid, Bucket).
+  L = riak_ops:keys(Pid, Bucket),
+  riak_ops:disconnect(Pid),
+  L.
 
 %% i.e. riak_setup:get("127.0.0.1", <<"set_a">>, <<"key">>).
 get(Ip, Bucket, Key) ->
   Pid = riak_ops:connect(Ip),
-  riak_ops:get(Pid, Bucket, Key, fun(_, _) -> error(sibling) end).
+  V = riak_ops:get(Pid, Bucket, Key, fun(_, _) -> error(sibling) end),
+  riak_ops:disconnect(Pid),
+  V.
 
 %%%_* Internal =========================================================
 create_objects(Pid, Bucket, N, P, B) ->
