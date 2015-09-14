@@ -13,23 +13,27 @@ handle(Req, State) ->
   {ok, Req2, State}.
 
 serve(<<"POST">>, Req) ->
-  {DatasetName0, Req1} = cowboy_req:qs_val(<<"ds">>, Req),
-  DatasetName = binary_to_atom(DatasetName0, utf8),
-  {QsVals, Req2} = cowboy_req:qs_vals(Req1),
-  lists:foreach(fun({Key, Val}) ->
-                    case Key of
-                      <<"ds">> -> ok;
-                      <<"bloom_false_probability">> ->
-                        Probability = binary_to_float(Val),
-                        lager:info("Setting false probability to ~p",
-                                   [Probability]),
-                        config:set_nested([datasets, DatasetName,
-                                           bloom_false_probability],
-                                          Probability);
-                      _ -> ok
-                    end
-                end, QsVals),
-  cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2);
+  try
+    {DatasetName0, Req1} = cowboy_req:qs_val(<<"ds">>, Req),
+    DatasetName = binary_to_atom(DatasetName0, utf8),
+    {QsVals, Req2} = cowboy_req:qs_vals(Req1),
+    lists:foreach(fun({Key, Val}) ->
+                      case Key of
+                        <<"ds">> -> ok;
+                        <<"bloom_false_probability">> ->
+                          Probability = binary_to_float(Val),
+                          lager:info("Setting false probability to ~p",
+                                     [Probability]),
+                          config:set_nested([datasets, DatasetName,
+                                             bloom_false_probability],
+                                            Probability);
+                        _ -> ok
+                      end
+                  end, QsVals),
+    cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2)
+  catch
+    _:_ -> cowboy_req:reply(500, [], [], Req)
+  end;
 serve(_, Req) ->
   cowboy_req:reply(405, Req).
 

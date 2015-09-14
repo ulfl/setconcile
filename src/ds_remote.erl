@@ -25,7 +25,8 @@ handle_call(ping, _From, #{host := Host, port := Port} = S) ->
 handle_call(prep, _From, #{host := Host, port := Port,
                            ds_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_prep),
-  http(put, Host, Port, fmt("/api/datasets/~p/prep", [Name]), <<>>, Tmo),
+  {ok, _} = http(put, Host, Port, fmt("/api/datasets/~p/prep", [Name]), <<>>,
+                 Tmo),
   {reply, ok, S};
 handle_call(get_bloom, _From, #{host := Host, port := Port,
                                 ds_name := Name} = S) ->
@@ -44,12 +45,13 @@ handle_call({store_elements, L}, _From,
             #{host := Host, port := Port, ds_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_transfer_elements),
   Data = term_to_binary(L),
-  http(post, Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
+  {ok, _} = http(post, Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
   {reply, {ok, byte_size(Data)}, S};
 handle_call(unprep, _From, #{host := Host, port := Port,
                              ds_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_unprep),
-  http(delete, Host, Port, fmt("/api/datasets/~p/prep", [Name]), <<>>, Tmo),
+  {ok, _} = http(delete, Host, Port, fmt("/api/datasets/~p/prep", [Name]), <<>>,
+                 Tmo),
   {reply, ok, S};
 handle_call(stop, _From, State) ->
   {stop, normal, ok, State}.
@@ -66,10 +68,13 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 http(Op, Host, Port, Path, Data, Tmo) ->
   try
     Url = fmt("http://~s:~p~s", [Host, Port, Path]),
-    {ok, 200, _RespHeaders, Ref} = hackney:request(Op, Url, [], Data,
-                                                   [{pool, default},
-                                                    {recv_timeout, Tmo}]),
-    {ok, _RespBody} = hackney:body(Ref)
+    {ok, Code, _RespHeaders, Ref} = hackney:request(Op, Url, [], Data,
+                                                    [{pool, default},
+                                                     {recv_timeout, Tmo}]),
+    case Code of
+      200 -> {ok, _RespBody} = hackney:body(Ref);
+      _   -> error
+    end
   catch
     C:E -> lager:info("http ~p: ~p:~p", [Op, C, E]), error
   end.

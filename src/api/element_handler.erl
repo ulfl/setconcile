@@ -13,13 +13,17 @@ handle(Req, State) ->
   {ok, Req2, State}.
 
 serve(<<"POST">>, Req) ->
-  {DsName0, Req1} = cowboy_req:binding(set, Req),
-  DsName = binary_to_existing_atom(DsName0, utf8),
-  {ok, Body, Req2} = cowboy_req:body(Req1),
-  D = misc:local_dataset(DsName),
-  L = binary_to_term(Body),
-  ds:store_elements(D, L),
-  cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2);
+  try
+    {DsName0, Req1} = cowboy_req:binding(set, Req),
+    DsName = binary_to_existing_atom(DsName0, utf8),
+    {ok, Body, Req2} = cowboy_req:body(Req1),
+    D = misc:local_dataset(DsName),
+    L = binary_to_term(Body),
+    ds:store_elements(D, L),
+    cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2)
+  catch
+    _:_ -> cowboy_req:reply(500, [], [], Req)
+  end;
 serve(_, Req) ->
   cowboy_req:reply(405, Req).
 
