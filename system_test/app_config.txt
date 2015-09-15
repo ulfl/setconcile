@@ -27,7 +27,7 @@ Minutes = fun(X) -> X * Seconds(60) end,
 Resolver = fun(V1, V2) -> max(V1, V2) end,
 
 Converged = fun(Its, TxCnt, RxCnt) ->
-                (Its > 20) or ((TxCnt + RxCnt) =:= 0) end,
+                (Its > 100) or ((TxCnt + RxCnt) =:= 0) end,
 
 #{
    node => NodeCfg,
@@ -75,7 +75,7 @@ Converged = fun(Its, TxCnt, RxCnt) ->
                                                dsdl_riak:new(DbIp, <<"set_a">>,
                                                              Resolver)),
        schedule                => Schedule,
-       tmo_prep                => Minutes(30),
+       tmo_prep                => Minutes(60),
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
        tmo_unprep              => Minutes(30),
