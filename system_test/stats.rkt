@@ -60,7 +60,7 @@
   (fprintf outf "false-probability, transfer-ratio, bloom-size, its, time~n")
   (let ((a (node-a))
         (b (node-b)))
-    (for ((bloom-false-probability (or range (in-range 0.001 0.9 0.1))))
+    (for ((bloom-false-probability (or range (in-range 0.001 0.5 0.1))))
       (printf " false-probability=~a~n" bloom-false-probability)
       (for ((tries (in-range 0 samples)))
         (printf "  sample=~a~n" tries)
@@ -104,7 +104,7 @@
 (define (quick2) (test/log 400 0.1 16 (in-range 0.001 0.9 0.1) 1))
 
 (define (all)
-  (for ((p (in-list (list 0.001 0.01 0.1 0.99))))
+  (for ((p (in-list (list 0.001 0.01))))
     (printf "Testing with p=~a~n" p)
     (sleep 1)
     (test/log 1000000 p 4096))
