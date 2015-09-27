@@ -1,17 +1,14 @@
-%% Determine our Erlang node name.
-[Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
-Node = erlang:list_to_atom(Node1),
-
-NodeA = "52.18.165.197",
-NodeB = "54.175.148.223",
+Node = b,
+NodeAIp = "54.154.127.187",
+NodeBIp = "52.23.244.241",
 DbIp = "127.0.0.1",
 
 %% Determine our node config based on the Erlang node name.
 NodeCfg = case Node of
-            a -> #{port => 7363, remote_host => NodeB,
+            a -> #{port => 7363, remote_host => NodeBIp,
                    remote_port => 7363, name => a};
 
-            b -> #{port => 7363, remote_host => NodeA,
+            b -> #{port => 7363, remote_host => NodeAIp,
                    remote_port => 7363, name => b}
           end,
 

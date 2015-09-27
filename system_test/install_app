@@ -7,16 +7,18 @@ NODE_A=`terraform output node_a`
 NODE_B=`terraform output node_b`
 
 # Update IP addresses in config.
-sed -i '' -e "s/NodeA = .*,/NodeA = \"${NODE_A}\",/" app_config.txt
-sed -i '' -e "s/NodeB = .*,/NodeB = \"${NODE_B}\",/" app_config.txt
+sed -i '' -e "s/NodeAIp = .*,/NodeAIp = \"${NODE_A}\",/" app_config.txt
+sed -i '' -e "s/NodeBIp = .*,/NodeBIp = \"${NODE_B}\",/" app_config.txt
 
 # Sync over code and config to Node A.
 rsync -av --delete -e "/usr/bin/ssh -o 'StrictHostKeyChecking no' -i ${SSH_KEY}" ../_rel ubuntu@${NODE_A}:/opt/setconcile
+sed -i '' -e "s/Node = .*,/Node = a,/" app_config.txt
 scp -o "StrictHostKeyChecking no" -i ${SSH_KEY} app_config.txt ubuntu@${NODE_A}:/opt/setconcile/etc/config.txt
 #ssh -i ${SSH_KEY} ubuntu@${NODE_A} rm -rf /opt/setconcile/_rel
 #tar -C .. -cz _rel | ssh -i ${SSH_KEY} ubuntu@${NODE_A} 'tar -xzf - -C /opt/setconcile'
 
 # Sync over code and config to Node B.
 rsync -av --delete -e "/usr/bin/ssh -o 'StrictHostKeyChecking no' -i ${SSH_KEY}" ../_rel ubuntu@${NODE_B}:/opt/setconcile
+sed -i '' -e "s/Node = .*,/Node = b,/" app_config.txt
 scp -o "StrictHostKeyChecking no" -i ${SSH_KEY} app_config.txt ubuntu@${NODE_B}:/opt/setconcile/etc/config.txt
 
