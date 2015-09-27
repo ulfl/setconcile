@@ -1,4 +1,4 @@
-#lang racket
+#lang at-exp racket
 
 (require net/http-client)
 (require json)
@@ -7,11 +7,50 @@
 
 (date-display-format 'iso-8601)
 
+(define dbg (lambda args (apply printf args)
+              (flush-output (current-output-port))))
+
 (define (cmd x) (string-trim (with-output-to-string (lambda() (system x)))))
+(define (cmddbg x)
+  (dbg "executing: ~a~n" x)
+  (let ((res (cmd x)))
+    (dbg "done")
+    res))
 
 (define (node-a) (cmd "~/bin/terraform output node_a"))
 (define (node-b) (cmd "~/bin/terraform output node_b"))
 (define (beep) (play-sound "/System/Library/Sounds/Glass.aiff" #f))
+
+(define (configure-and-start-setconcile host a b)
+  (let* ((f (lambda x (string-replace (apply string-append x) "\n" " ")))
+         (c1 @f{ssh -o 'StrictHostKeyChecking no' -i ~/.ssh/pgw.pem
+                ubuntu@"@"@host 'sed -i -e "s/NodeAIp = .*,/NodeAIp =
+                \"@|a|\",/" /opt/setconcile/etc/config.txt'})
+         (c2 @f{ssh -o 'StrictHostKeyChecking no' -i ~/.ssh/pgw.pem
+                ubuntu@"@"@host 'sed -i -e "s/NodeBIp = .*,/NodeBIp =
+                \"@|b|\",/" /opt/setconcile/etc/config.txt'})
+         (c3 @f{ssh -o 'StrictHostKeyChecking no' -i ~/.ssh/pgw.pem
+                ubuntu@"@"@host /opt/setconcile/_rel/setconcile/bin/setconcile
+                start}))
+    (cmddbg c1)
+    (cmddbg c2)
+    (cmddbg c3)))
+
+(define (reinitialize-nodes-from-ami)
+
+  (define (reinitialize-nodes)
+    (cmddbg "~/bin/terraform taint -module=a aws_instance.replication_node")
+    (cmddbg "~/bin/terraform taint -module=b aws_instance.replication_node")
+    (cmddbg "~/bin/terraform apply --var-file=~/.aws/credentials.tf"))
+  
+  (reinitialize-nodes)
+  (dbg "AWS initialization done.~n")
+  (let ((a (node-a)) (b (node-b)))
+    (dbg "Configuring and starting setconcile.~n")
+    (configure-and-start-setconcile a a b)
+    (configure-and-start-setconcile b a b)
+    (sleep 10) ;; Give setconcile time to start.
+    (dbg "Done starting setconcile.~n")))
 
 (define (ping ip)
   (let*-values (((status headers in)
@@ -58,18 +97,23 @@
 
 (define (test outf n p bulk (range #f) (samples 3))
   (fprintf outf "false-probability, transfer-ratio, bloom-size, its, time~n")
-  (let ((a (node-a))
-        (b (node-b)))
-    (for ((bloom-false-probability (or range (in-range 0.001 0.5 0.1))))
-      (printf " false-probability=~a~n" bloom-false-probability)
-      (for ((tries (in-range 0 samples)))
-        (printf "  sample=~a~n" tries)
-        (ping a)
-        (ping b)
+  (for ((bloom-false-probability (or range (in-range 0.001 0.5 0.1))))
+    (dbg " false-probability=~a~n" bloom-false-probability)
+    (for ((tries (in-range 0 samples)))
+      (dbg "  sample=~a~n" tries)
+
+      ;; Setting up the db is slow, so reinitializing using a
+      ;; preconfigured AMI is quicker. Assumes the AMI has already
+      ;; been setup with the correct n,p,bulk parameters.
+      ;;(pmap (lambda(ip) (setup-db ip n p bulk)) (list a b))
+      (reinitialize-nodes-from-ami)
+
+      (let ((a (node-a)) (b (node-b)))
+        (ping a) (ping b)
         (config-bloom a bloom-false-probability)
         (config-bloom b bloom-false-probability)
-        (pmap (lambda(ip) (setup-db ip n p bulk)) (list a b))
-        (sleep 1)
+
+        (dbg "Starting reconciliation.~n")
         (let ((res (reconcile a)))
           ;; FIXME: Add verification of result.
           (displayln (assemble-result bloom-false-probability res) outf)
@@ -87,7 +131,7 @@
     (cmd (format "./plot.R ~s ~s" file
                  (format "n=~a, p=~a, bulk=~a, runtime=~a" n p bulk
                          (format-runtime dt))))
-    (displayln "done")))
+    (dbg "done")))
 
 (define (file-name n p bulk)
   (let ((git-revision (cmd "git rev-parse --short HEAD"))
@@ -104,10 +148,10 @@
 (define (quick2) (test/log 400 0.1 16 (in-range 0.001 0.9 0.1) 1))
 
 (define (all)
-  (for ((p (in-list (list 0.001 0.01))))
+  (for ((p (in-list (list 0.001))))
     (printf "Testing with p=~a~n" p)
     (sleep 1)
-    (test/log 1000000 p 4096))
+    (test/log 1000000 p 4096 (in-list '(0.001 0.1 0.15 0.2 0.25 0.3 0.4 0.5 0.6))))
   (beep))
 
 (define (pmap f xs)
