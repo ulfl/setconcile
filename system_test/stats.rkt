@@ -7,14 +7,17 @@
 
 (date-display-format 'iso-8601)
 
-(define dbg (lambda args (apply printf args)
+(define dbg (lambda (fmt . args)
+              (date-display-format 'iso-8601)
+              (let ((date (date->string (current-date) #t)))
+                (apply printf (cons (string-append "~a: " fmt) (cons date args))))
               (flush-output (current-output-port))))
 
 (define (cmd x) (string-trim (with-output-to-string (lambda() (system x)))))
 (define (cmddbg x)
   (dbg "executing: ~a~n" x)
   (let ((res (cmd x)))
-    (dbg "done")
+    (dbg "done~n")
     res))
 
 (define (node-a) (cmd "~/bin/terraform output node_a"))
@@ -49,7 +52,8 @@
     (dbg "Configuring and starting setconcile.~n")
     (configure-and-start-setconcile a a b)
     (configure-and-start-setconcile b a b)
-    (sleep 10) ;; Give setconcile time to start.
+    (dbg "Waiting for setconcile to start.~n")
+    (sleep 60) ;; Give setconcile time to start.
     (dbg "Done starting setconcile.~n")))
 
 (define (ping ip)
@@ -107,8 +111,9 @@
       ;; been setup with the correct n,p,bulk parameters.
       ;;(pmap (lambda(ip) (setup-db ip n p bulk)) (list a b))
       (reinitialize-nodes-from-ami)
-
+      
       (let ((a (node-a)) (b (node-b)))
+        (dbg "Setting false probability.~n")
         (ping a) (ping b)
         (config-bloom a bloom-false-probability)
         (config-bloom b bloom-false-probability)
@@ -131,7 +136,7 @@
     (cmd (format "./plot.R ~s ~s" file
                  (format "n=~a, p=~a, bulk=~a, runtime=~a" n p bulk
                          (format-runtime dt))))
-    (dbg "done")))
+    (dbg "done~n")))
 
 (define (file-name n p bulk)
   (let ((git-revision (cmd "git rev-parse --short HEAD"))
