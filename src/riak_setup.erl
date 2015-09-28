@@ -99,5 +99,5 @@ create_objects(Pid, Bucket, N, P, B) ->
   Expected.
 
 node_name() ->
-  [Node1, _Host] = string:tokens(atom_to_list(node()), "@"),
-  erlang:list_to_atom(Node1).
+  {ok, Name} = config:get_nested([node, name]),
+  Name.
