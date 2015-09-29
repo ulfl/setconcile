@@ -4,6 +4,7 @@
 (require json)
 (require racket/date)
 (require racket/gui/base)
+(require racket/engine)
 
 (date-display-format 'iso-8601)
 
@@ -53,8 +54,23 @@
     (configure-and-start-setconcile a a b)
     (configure-and-start-setconcile b a b)
     (dbg "Waiting for setconcile to start.~n")
-    (sleep 60) ;; Give setconcile time to start.
+    (sleep 120) ;; Give setconcile time to start.
     (dbg "Done starting setconcile.~n")))
+
+(define (ping-retry ip)
+  (let iter ((count 3))
+      (cond ((= count 0) (error "ping failed three times"))
+            (else
+             (let* ((eng (engine (lambda (_)
+                                   (with-handlers ((exn:fail? (lambda (_) #f)))
+                                     (ping ip)))))
+                    (_ (engine-run 5000 eng))
+                    (res (engine-result eng)))
+               (cond ((eq? res 'ok) 'ok)
+                     (else
+                      (dbg "retrying ping~n")
+                      (sleep 5)
+                      (iter (- count 1)))))))))
 
 (define (ping ip)
   (let*-values (((status headers in)
@@ -62,7 +78,8 @@
                 ((res)
                  (port->string in)))
     (unless (string=? res "ok")
-      (error (format "node not up (~s)" res)))))
+      (error (format "node not up (~s)" res))))
+  'ok)
 
 (define (setup-db ip n p bb)
   (http-sendrecv ip (format "/api/debug/setup_db?n=~a&p=~a&bb=~a" n p bb)
@@ -114,7 +131,7 @@
       
       (let ((a (node-a)) (b (node-b)))
         (dbg "Setting false probability.~n")
-        (ping a) (ping b)
+        (ping-retry a) (ping-retry b)
         (config-bloom a bloom-false-probability)
         (config-bloom b bloom-false-probability)
 
