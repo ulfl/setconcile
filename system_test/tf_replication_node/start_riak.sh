@@ -1,2 +1,2 @@
-riak start
+sudo riak start
 riak ping

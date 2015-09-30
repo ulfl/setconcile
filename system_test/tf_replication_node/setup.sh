@@ -1,8 +1,8 @@
 set -e
 
-wget http://s3.amazonaws.com/downloads.basho.com/riak/1.3/1.3.2/ubuntu/precise/riak_1.3.2-1_amd64.deb
-sudo dpkg -i riak_1.3.2-1_amd64.deb
-rm riak_1.3.2-1_amd64.deb
+wget http://s3.amazonaws.com/downloads.basho.com/riak/1.4/1.4.12/ubuntu/precise/riak_1.4.12-1_amd64.deb
+sudo dpkg -i riak_1.4.12-1_amd64.deb
+rm riak_1.4.12-1_amd64.deb
 sudo patch /etc/riak/app.config -p2 < ./riak.patch
 rm riak.patch
 
