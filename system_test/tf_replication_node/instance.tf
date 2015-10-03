@@ -5,14 +5,16 @@ variable "key_file" {}
 variable "region" { }
 variable "amis" {
     default = {
-       eu-west-1 = "ami-fda2888a" # eec22ce-1M-0.1-4096-nodea
-       us-east-1 = "ami-332d6a56" # eec22ce-1M-0.1-4096-nodeb
-#        eu-west-1 = "ami-9bc8e3ec" # f862c1e-1M-0.1-4096-nodea
-#        us-east-1 = "ami-51ef9534" # f862c1e-1M-0.1-4096-nodeb
+        eu-west-1 = "ami-07596d70" # 0679086-1M-0.001-1024-nodea.
+        us-east-1 = "ami-f5357590" # 0679086-1M-0.001-1024-nodeb.
+#        eu-west-1 = "ami-fda2888a" # eec22ce-1M-0.1-4096-nodea.
+#        us-east-1 = "ami-332d6a56" # eec22ce-1M-0.1-4096-nodeb.
+#        eu-west-1 = "ami-9bc8e3ec" # f862c1e-1M-0.1-4096-nodea.
+#        us-east-1 = "ami-51ef9534" # f862c1e-1M-0.1-4096-nodeb.
 #        eu-west-1 = "ami-c796beb0" # 12d3e70-1M-0.001-4096-nodea.
 #        us-east-1 = "ami-4998e32c" # 12d3e70-1M-0.001-4096-nodeb.
-#        eu-west-1 = "ami-92401ce5" # ubuntu 14.04.3
-#        us-east-1 = "ami-2dcf7b46" # ubuntu 14.04.3
+#        eu-west-1 = "ami-92401ce5" # ubuntu 14.04.3.
+#        us-east-1 = "ami-2dcf7b46" # ubuntu 14.04.3.
     }
 }
 

@@ -139,6 +139,7 @@
         (dbg "Starting reconciliation.~n")
         (let ((res (reconcile a)))
           ;; FIXME: Add verification of result.
+          (dbg "Reconciliation done.~n")
           (displayln (assemble-result bloom-false-probability res) outf)
           (flush-output outf))))))
 
