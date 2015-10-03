@@ -21,7 +21,7 @@ prep({Ip, Bucket, Resolver, _, _}) ->
                {dict:from_list(KV), Size}
            end,
   {Dt, {KeyVals, Size}} = timer:tc(fun() -> DoPrep() end),
-  lager:info("dsdl_riak: prep: num_elements=~p, size=~p, prep_time=~p",
+  lager:info("dsdl_riak prep (num_elements=~p, size=~p, prep_time_s=~p).",
              [dict:size(KeyVals), Size, Dt / (1000 * 1000)]),
   {Size, {Ip, Bucket, Resolver, Pid, KeyVals}}.
 
@@ -44,11 +44,7 @@ unprep({Ip, Bucket, Resolver, Pid, _Keys}) ->
   riak_ops:disconnect(Pid),
   {Ip, Bucket, Resolver, no_pid, no_keys}.
 
-%% map_keys(Pid, Bucket, Keys) ->
-%%   BucketKeyPairs = [{Bucket, Key} || Key <- Keys],
-%%   map(Pid, BucketKeyPairs).
-
-map(Pid, BucketOrBucketKeyPairs) ->
+map(Pid, Bucket) ->
   F =
     "fun({error, notfound}, _, _)   -> [];
         (Obj, _, _Arg) ->
@@ -66,15 +62,12 @@ map(Pid, BucketOrBucketKeyPairs) ->
   {Dt, L} =
     timer:tc(
       fun() ->
-          Res = riakc_pb_socket:mapred(Pid, BucketOrBucketKeyPairs,
-                                       [{map, {strfun, F}, "myarg",
-                                         true}], 3600000),
+          Res = riakc_pb_socket:mapred(Pid, Bucket, [{map, {strfun, F}, "myarg",
+                                                      true}], 3600000),
           L = case Res of
                 {ok, [{0, X}]} -> X;
                 {ok, []} -> []
               end,
           L
       end),
-  io:format("mapred time: ~ps. length(L): ~p~n", [Dt / (1000 * 1000),
-                                                  length(L)]),
   L.

@@ -5,6 +5,8 @@
 -export([handle/2]).
 -export([terminate/3]).
 
+-define(MAX_BODY, 1024 * 1024 * 100). %% 100MB.
+
 init(_Transport, Req, []) -> {ok, Req, undefined}.
 
 handle(Req, State) ->
@@ -16,13 +18,19 @@ serve(<<"POST">>, Req) ->
   try
     {DsName0, Req1} = cowboy_req:binding(set, Req),
     DsName = binary_to_existing_atom(DsName0, utf8),
-    {ok, Body, Req2} = cowboy_req:body(Req1),
-    D = misc:local_dataset(DsName),
+    {{Ip, _Port}, Req2} = cowboy_req:peer(Req1),
+    {ok, Body, Req3} = cowboy_req:body(Req2, [{length, ?MAX_BODY}]),
+    Ds = misc:local_dataset(DsName),
     L = binary_to_term(Body),
-    ds:store_elements(D, L),
-    cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2)
+    lager:info("element_handler (dataset=~p, num_elements=~p, peer=~p).",
+               [DsName, length(L), Ip]),
+    ds:store_elements(Ds, L),
+    cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req3)
   catch
-    _:_ -> cowboy_req:reply(500, [], [], Req)
+    C:E ->
+      lager:error("element_handler (error={~p, ~p}, stack=~p).",
+                  [C, E, erlang:get_stacktrace()]),
+      cowboy_req:reply(500, [], [], Req)
   end;
 serve(_, Req) ->
   cowboy_req:reply(405, Req).

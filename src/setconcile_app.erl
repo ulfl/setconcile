@@ -32,7 +32,8 @@ start(_Type, _Args) ->
                        %% the bloom filter to the requesting node.
                        {"/api/datasets/:set/transfers", transfers_handler, []},
 
-                       %% POST elements to be included in the given set.
+                       %% POST a list of elements to be included in the
+                       %% given dataset.
                        {"/api/datasets/:set", element_handler, []},
 
                        %% Debug interface.
@@ -43,7 +44,7 @@ start(_Type, _Args) ->
 
   {ok, NodeCfg} = config:get(node),
   Port = maps:get(port, NodeCfg),
-  lager:info("Starting Setconcile on port ~p", [Port]),
+  lager:info("Starting Setconcile on port ~p.", [Port]),
 
   %% Start the web server.
   {ok, _} = cowboy:start_http(http, 100, [{port, Port}],
@@ -57,7 +58,7 @@ start(_Type, _Args) ->
         case Schedule of
           false -> ok;
           _     ->
-            lager:info("Sceduling sync for ~p: ~p", [DatasetName, Schedule]),
+            lager:info("Sceduling sync for ~p: ~p.", [DatasetName, Schedule]),
             erlcron:cron({Schedule, {reconcile, reconcile, [DatasetName]}})
         end
     end),

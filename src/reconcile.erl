@@ -10,7 +10,7 @@ reconcile(DsName) ->
   RemoteDs = misc:remote_dataset(DsName),
 
   %% Prep both sides simultaneously.
-  lager:info("Prepping dataset for sync (dataset=~p).~n", [DsName]),
+  lager:info("Prepping dataset for sync (dataset=~p).", [DsName]),
   {PrepTime, [DsSize, _]} =
     timer:tc(fun() ->
                  plists:map(fun(F) -> F() end,
@@ -18,7 +18,7 @@ reconcile(DsName) ->
                              fun() -> ds:prep(RemoteDs) end],
                             {processes, 2})
              end),
-  lager:info("Prepping done (time=~.2fs)~n", [sec(PrepTime)]),
+  lager:info("Prepping done (time_s=~.2f).", [sec(PrepTime)]),
 
   Converged = misc:get_ds_config(DsName, converged),
   {RecTime, {ok, Its, Stats}} =
@@ -26,14 +26,14 @@ reconcile(DsName) ->
 
   #{data_size := DataSize, bloom_size := BloomSize, tx_cnt := TxCnt,
     rx_cnt := RxCnt} = Stats,
-  lager:info("Reconciliation done (dataset=~p, time=~.2fs, its=~p, "
-             "data_size=~.2f MB, bloom_size=~.2f MB, tx_cnt=~p, rx_cnt=~p)~n", 
+  lager:info("Reconciliation done (dataset=~p, time_s=~.2f, its=~p, "
+             "data_size=~.2f MB, bloom_size=~.2f MB, tx_cnt=~p, rx_cnt=~p).",
              [DsName, sec(RecTime), Its, mb(DataSize), mb(BloomSize), TxCnt, 
               RxCnt]),
-  lager:info("Size of local dataset (dataset=~p, dataset_size=~.2fMB)~n", 
+  lager:info("Size of local dataset (dataset=~p, dataset_size=~.2fMB).",
              [DsName, mb(DsSize)]),
   lager:info("Ratio of transferred data to dataset size (dataset=~p, "
-             "size_ratio=~.2f)~n", [DsName, (DataSize + BloomSize) / DsSize]),
+             "size_ratio=~.2f).", [DsName, (DataSize + BloomSize) / DsSize]),
 
   ds:unprep(LocalDs),
   ds:unprep(RemoteDs),
@@ -63,14 +63,14 @@ reconcile(DsName, LocalDs, RemoteDs, Its, MaxIts, Converged, Stats0) ->
 
 transfer(DsName, SourceDs, DestDs, DestStr) ->
   {Dt1, Bloom} = timer:tc(fun() -> ds:get_bloom(DestDs) end),
-  lager:info("Calculated ~s bloom (dataset=~p, dt=~.2fs).", [DestStr, DsName,
-                                                             sec(Dt1)]),
+  lager:info("Calculated ~s bloom (dataset=~p, time_s=~.2f).",
+             [DestStr, DsName, sec(Dt1)]),
 
   {Dt2, {Cnt, Size}} =
     timer:tc(fun() -> ds:transfer_missing(SourceDs, Bloom, DestDs) end),
   lager:info("Transferred elements to ~s (dataset=~p, num_elements=~p, "
-             "total_size=~pB, dt=~.2fs)~n", [DestStr, DsName, Cnt, Size, 
-                                             sec(Dt2)]),
+             "total_size=~pB, time_s=~.2f).", [DestStr, DsName, Cnt, Size,
+                                               sec(Dt2)]),
   {Bloom, Cnt, Size}.
 
 bloom_size(B) -> byte_size(ebloom:serialize(B)).

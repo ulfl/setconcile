@@ -1,4 +1,4 @@
-%% Copyright (c) 2015 Ulf Leopold.os
+%% Copyright (c) 2015 Ulf Leopold.
 -module(riak_ops).
 
 -export([connect/1]).
@@ -38,29 +38,29 @@ count(Pid, Bucket) -> length(keys(Pid, Bucket)).
 %% modification (i.e. resolving with the remote object), and write the
 %% result to the DB. If there is no existing object, then we just create
 %% a new one. The value that was stored is returned.
-put(Pid, Bucket, Key, Value, Resolve) ->
+put(Pid, Bucket, Key, Value, Resolver) ->
   {NewObj, NewValue} =
     case riakc_pb_socket:get(Pid, Bucket, Key) of
       {error, notfound} ->
         {riakc_obj:new(Bucket, Key, term_to_binary(Value)), Value};
       {ok, Obj} ->
         Values = [binary_to_term(X) || X <- riakc_obj:get_values(Obj)],
-        Value1 = do_resolve([Value | Values], Resolve),
-        {riakc_obj:update_value(Obj, term_to_binary(Value1)), Value1}
+        Resolved = do_resolve([Value | Values], Resolver),
+        {riakc_obj:update_value(Obj, term_to_binary(Resolved)), Resolved}
     end,
   ok = riakc_pb_socket:put(Pid, NewObj, [{w, quorum}, {dw, one}], 5000),
   NewValue.
 
 %% Get the current value for Key in the DB. In case there are siblings
 %% they are resolved. FIXME: what if object deleted?
-get(Pid, Bucket, Key, Resolve) ->
+get(Pid, Bucket, Key, Resolver) ->
   {ok, Obj} = riakc_pb_socket:get(Pid, Bucket, Key),
   Values = [binary_to_term(X) || X <- riakc_obj:get_values(Obj)],
-  do_resolve(Values, Resolve).
+  do_resolve(Values, Resolver).
 
-do_resolve([H], _Resolve)   ->
+do_resolve([H], _Resolver)   ->
   H;
-do_resolve([H|T], Resolve) ->
-  F = fun(X, A) -> Resolve(X, A) end,
+do_resolve([H|T], Resolver) ->
+  F = fun(X, A) -> Resolver(X, A) end,
   lists:foldl(F, H, T).
 

@@ -1,6 +1,6 @@
 Node = b,
-NodeAIp = "54.154.127.187",
-NodeBIp = "52.23.244.241",
+NodeAIp = "52.17.149.30",
+NodeBIp = "52.3.243.168",
 DbIp = "127.0.0.1",
 
 %% Determine our node config based on the Erlang node name.
@@ -36,7 +36,7 @@ Converged = fun(Its, TxCnt, RxCnt) ->
        tmo_get_bloom           => Seconds(10),
        tmo_transfer_elements   => Seconds(10),
        tmo_unprep              => Seconds(10),
-       max_transfer_bundle     => 100,
+       max_transfer_bundle     => 10000,
        converged               => Converged,
        bloom_false_probability => 0.5
       },
@@ -49,7 +49,7 @@ Converged = fun(Its, TxCnt, RxCnt) ->
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
        tmo_unprep              => Minutes(30),
-       max_transfer_bundle     => 100,
+       max_transfer_bundle     => 10000,
        converged               => Converged,
        bloom_false_probability => 0.5
       },
@@ -62,7 +62,7 @@ Converged = fun(Its, TxCnt, RxCnt) ->
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
        tmo_unprep              => Minutes(30),
-       max_transfer_bundle     => 100,
+       max_transfer_bundle     => 10000,
        converged               => Converged,
        bloom_false_probability => 0.5
       },
@@ -76,9 +76,9 @@ Converged = fun(Its, TxCnt, RxCnt) ->
        tmo_get_bloom           => Minutes(30),
        tmo_transfer_elements   => Minutes(30),
        tmo_unprep              => Minutes(30),
-       max_transfer_bundle     => 100,
+       max_transfer_bundle     => 10000,
        converged               => Converged,
-       bloom_false_probability => 0.5
+       bloom_false_probability => 0.2
       }
     }
  }.

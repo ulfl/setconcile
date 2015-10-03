@@ -16,13 +16,17 @@ serve(<<"POST">>, Req) ->
   try
     {Ds0, Req1} = cowboy_req:binding(set, Req),
     DsName = binary_to_existing_atom(Ds0, utf8),
+    {{Ip, _Port}, Req2} = cowboy_req:peer(Req1),
+    lager:info("recons_handler (dataset=~p, peer=~p).", [DsName, Ip]),
     Res = reconcile:reconcile(DsName),
-    lager:info("recons_handler: reconcile done"),
+    lager:info("recons_handler: reconciliation done."),
     Json = jsx:encode(Res),
-    lager:info("recons_handler: jsx done"),
     cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], Json, Req1)
   catch
-    _:_ -> cowboy_req:reply(500, [], [], Req)
+    C:E ->
+      lager:error("recons_handler (error={~p, ~p}, stack=~p).",
+                  [C, E, erlang:get_stacktrace()]),
+      cowboy_req:reply(500, [], [], Req)
   end;
 serve(_, Req) ->
   cowboy_req:reply(405, Req).

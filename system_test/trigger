@@ -6,10 +6,10 @@ NODE_A=`terraform output node_a`
 NODE_B=`terraform output node_b`
 
 # Make sure both nodes are up.
-curl -f http://${NODE_A}:9001/api/ping
-curl -f http://${NODE_B}:9001/api/ping
+curl -f http://${NODE_A}:7363/api/ping
+curl -f http://${NODE_B}:7363/api/ping
 
-#time curl -X POST http://${NODE_A}:9001/api/datasets/mini/recons
-#time curl -X POST http://${NODE_A}:9001/api/datasets/symm/recons
-#time curl -X POST http://${NODE_A}:9001/api/datasets/riak_mini/recons
-time curl -X POST http://${NODE_A}:9001/api/datasets/riak_set_a/recons
+#time curl -X POST http://${NODE_A}:7363/api/datasets/mini/recons
+time curl -X POST http://${NODE_A}:7363/api/datasets/symm/recons
+#time curl -X POST http://${NODE_A}:7363/api/datasets/riak_mini/recons
+#time curl -X POST http://${NODE_A}:7363/api/datasets/riak_set_a/recons

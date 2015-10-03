@@ -63,7 +63,7 @@ split_in_two(L) -> lists:split(trunc(length(L) / 2), L).
 update(L) -> [{K, {Time + 1, Bulk}} || {K, {Time, Bulk}} <- L].
 
 verify(Elements, ExpectedElements) ->
-  lager:info("num_elements_current=~p, num_elements_expected=~p",
+  lager:info("num_elements_current=~p, num_elements_expected=~p.",
              [length(Elements), length(ExpectedElements)]),
   compare(lists:sort(Elements), lists:sort(ExpectedElements)).
 

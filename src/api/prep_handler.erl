@@ -21,15 +21,18 @@ do_op(Op, Req) ->
     {DsName0, Req1} = cowboy_req:binding(set, Req),
     DsName = binary_to_existing_atom(DsName0, utf8),
     {{Ip, _Port}, Req2} = cowboy_req:peer(Req1),
-    lager:info("prep_handler (~p): dataset=~p, peer=~p", [Op, DsName, Ip]),
-    D = misc:local_dataset(DsName),
+    lager:info("prep_handler (op=~p, dataset=~p, peer=~p).", [Op, DsName, Ip]),
+    Ds = misc:local_dataset(DsName),
     case Op of
-      prep -> ds:prep(D);
-      unprep -> ds:unprep(D)
+      prep -> ds:prep(Ds);
+      unprep -> ds:unprep(Ds)
     end,
     cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req2)
   catch
-    _:_ -> cowboy_req:reply(500, [], [], Req)
+    C:E ->
+      lager:error("prep_handler (error={~p, ~p}, stack=~p).",
+                  [C, E, erlang:get_stacktrace()]),
+      cowboy_req:reply(500, [], [], Req)
   end.
 
 terminate(_Reason, _Req, _State) -> ok.

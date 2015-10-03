@@ -1,3 +1,4 @@
+;; Copyright (c) 2015 Ulf Leopold.
 #lang at-exp racket
 
 (require net/http-client)
@@ -158,7 +159,7 @@
 (define (file-name n p bulk)
   (let ((git-revision (cmd "git rev-parse --short HEAD"))
         (date (date->string (current-date) #t)))
-    (format "testrun-~a-~a-~a-~a-~a.dat" git-revision n p bulk date)))
+    (format "results/testrun-~a-~a-~a-~a-~a.dat" git-revision n p bulk date)))
 
 (define (format-runtime ms)
   (let ((s (ms->s ms)))

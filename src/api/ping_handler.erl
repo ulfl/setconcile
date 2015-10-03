@@ -8,13 +8,14 @@
 init(_Transport, Req, []) -> {ok, Req, undefined}.
 
 handle(Req, State) ->
-  lager:info("ping handler"),
   {Method, Req1} = cowboy_req:method(Req),
   {ok, Req2} = serve(Method, Req1),
   {ok, Req2, State}.
 
 serve(<<"GET">>, Req) ->
-  cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req);
+  {{Ip, _Port}, Req1} = cowboy_req:peer(Req),
+  lager:info("ping_handler (peer=~p).", [Ip]),
+  cowboy_req:reply(200, [{<<"content-type">>, <<"text/plain">>}], "ok", Req1);
 serve(_, Req) ->
   cowboy_req:reply(405, Req).
 

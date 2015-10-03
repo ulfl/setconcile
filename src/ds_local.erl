@@ -55,7 +55,7 @@ terminate(_Reason, _State) -> ok.
 
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
-%%%_* Helpers ==========================================================
+%%%_* Internal =========================================================
 bundle(L, F, MaxSize) -> bundle(MaxSize, L, [], F, 0, MaxSize).
 
 bundle(_, [], A, F, S, _MaxSize) ->

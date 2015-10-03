@@ -64,7 +64,7 @@ terminate(_Reason, _State) -> ok.
 
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
-%%%_* Helpers ==========================================================
+%%%_* Internal =========================================================
 http(Op, Host, Port, Path, Data, Tmo) ->
   try
     Url = fmt("http://~s:~p~s", [Host, Port, Path]),
@@ -73,10 +73,13 @@ http(Op, Host, Port, Path, Data, Tmo) ->
                                                      {recv_timeout, Tmo}]),
     case Code of
       200 -> {ok, _RespBody} = hackney:body(Ref);
-      _   -> error
+      _   -> {hackney_error, Code}
     end
   catch
-    C:E -> lager:info("http ~p: ~p:~p", [Op, C, E]), error
+    C:E ->
+      lager:error("ds_remote:http (error={~p, ~p}, stack=~p).",
+                  [C, E, erlang:get_stacktrace()]),
+      error
   end.
 
 fmt(Str, Args) -> lists:flatten(io_lib:format(Str, Args)).
