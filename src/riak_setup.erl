@@ -42,13 +42,13 @@ mini() ->
   Resolve = fun(_, _) -> error(existing_object) end,
   case node_name() of
     a ->
-      riak_ops:put(Pid, Bucket, "key1", 1, Resolve),
-      riak_ops:put(Pid, Bucket, "key2", 2, Resolve),
-      riak_ops:put(Pid, Bucket, "key_a", 1, Resolve);
+      riak_ops:put(Pid, Bucket, <<"key1">>, 1, Resolve),
+      riak_ops:put(Pid, Bucket, <<"key2">>, 2, Resolve),
+      riak_ops:put(Pid, Bucket, <<"key_a">>, 1, Resolve);
     b ->
-      riak_ops:put(Pid, Bucket, "key1", 2, Resolve),
-      riak_ops:put(Pid, Bucket, "key2", 1, Resolve),
-      riak_ops:put(Pid, Bucket, "key_b", 1, Resolve)
+      riak_ops:put(Pid, Bucket, <<"key1">>, 2, Resolve),
+      riak_ops:put(Pid, Bucket, <<"key2">>, 1, Resolve),
+      riak_ops:put(Pid, Bucket, <<"key_b">>, 1, Resolve)
   end,
   riak_ops:disconnect(Pid).
 

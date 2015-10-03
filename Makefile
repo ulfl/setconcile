@@ -13,8 +13,8 @@ dep_bear     = git https://github.com/boundary/bear.git 0.8.2
 dep_folsom   = git https://github.com/boundary/folsom.git 0.8.2
 dep_jsx      = git https://github.com/talentdeficit/jsx.git v2.7.1
 dep_erlcron  = git https://github.com/erlware/erlcron.git ac49936
-dep_riak_pb  = git https://github.com/basho/riak_pb.git 1.3.3slf
-dep_riakc    = git https://github.com/basho/riak-erlang-client.git 1.3.3slf
+dep_riak_pb  = git https://github.com/basho/riak_pb.git 1.4.4.0
+dep_riakc    = git https://github.com/basho/riak-erlang-client.git 1.4.2
 
 ERLC_OPTS = +debug_info +"{parse_transform, lager_transform}"
 
