@@ -172,10 +172,10 @@
 (define (quick2) (test/log 400 0.1 16 (in-range 0.001 0.9 0.1) 1))
 
 (define (all)
-  (for ((p (in-list (list 0.1))))
+  (for ((p (in-list (list 0.001))))
     (printf "Testing with p=~a~n" p)
     (sleep 1)
-    (test/log 1000000 p 4096 (in-list '(0.001 0.1 0.15 0.2 0.25 0.3 0.4 0.5 0.6))))
+    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.15 0.2 0.25 0.3 0.4 0.5 0.6))))
   (beep))
 
 (define (pmap f xs)
