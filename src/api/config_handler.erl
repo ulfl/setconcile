@@ -14,10 +14,10 @@ handle(Req, State) ->
 
 serve(<<"POST">>, Req) ->
   try
-    {{Ip, _Port}, Req1} = cowboy_req:peer(Req),
-    lager:info("config_handler (peer=~p).", [Ip]),
-    {DsName0, Req2} = cowboy_req:qs_val(<<"ds">>, Req1),
-    DsName = binary_to_atom(DsName0, utf8),
+    {DsName0, Req1} = cowboy_req:qs_val(<<"ds">>, Req),
+    DsName = binary_to_existing_atom(DsName0, utf8),
+    {{Ip, _Port}, Req2} = cowboy_req:peer(Req1),
+    lager:info("config_handler (dataset=~p, peer=~p).", [DsName, Ip]),
     {QsVals, Req3} = cowboy_req:qs_vals(Req2),
     lists:foreach(fun({Key, Val}) ->
                       case Key of

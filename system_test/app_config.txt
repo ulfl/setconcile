@@ -1,6 +1,6 @@
 Node = b,
-NodeAIp = "52.17.149.30",
-NodeBIp = "52.3.243.168",
+NodeAIp = "52.19.199.220",
+NodeBIp = "52.3.245.65",
 DbIp = "127.0.0.1",
 
 %% Determine our node config based on the Erlang node name.
@@ -27,6 +27,8 @@ Converged = fun(Its, TxCnt, RxCnt) ->
                 (Its > 100) or ((TxCnt + RxCnt) =:= 0) end,
 
 #{
+   debug_api => true,
+
    node => NodeCfg,
 
    datasets => #{

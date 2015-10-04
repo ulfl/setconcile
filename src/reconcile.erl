@@ -33,7 +33,7 @@ reconcile(DsName) ->
   lager:info("Size of local dataset (dataset=~p, dataset_size=~.2fMB).",
              [DsName, mb(DsSize)]),
   lager:info("Ratio of transferred data to dataset size (dataset=~p, "
-             "size_ratio=~.2f).", [DsName, (DataSize + BloomSize) / DsSize]),
+             "size_ratio=~.3f).", [DsName, (DataSize + BloomSize) / DsSize]),
 
   ds:unprep(LocalDs),
   ds:unprep(RemoteDs),
