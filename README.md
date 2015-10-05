@@ -44,8 +44,8 @@ mapreduce time of a few minutes.
 
 Percent of dataset that differs  | Best sync time (excluding mapreduce time)
 -------------------------------- | -----------------------------------------
-0.1%                             |  ~50s
-10%                              |  TBD
+0.1%                             |  ~50 s
+10%                              |  6.5 min
 
 
 References
