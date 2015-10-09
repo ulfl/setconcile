@@ -175,7 +175,7 @@
   (for ((p (in-list (list 'onesided))))
     (printf "Testing with p=~a~n" p)
     (sleep 1)
-    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.15 0.2 0.25 0.3 0.4 0.5 0.6))))
+    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.2 0.3 0.4 0.5 0.6))))
   (beep))
 
 (define (pmap f xs)
