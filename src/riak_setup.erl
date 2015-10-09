@@ -2,6 +2,7 @@
 -module(riak_setup).
 
 -export([symm/5]).
+-export([symm_onesided/4]).
 -export([verify/5]).
 -export([mini/0]).
 -export([clear/2]).
@@ -17,6 +18,17 @@ symm(Ip, Bucket, N, P, B) ->
   riak_ops:configure_bucket(Pid, Bucket),
   io:format("Creating objects~n", []),
   {Dt, _} = timer:tc(fun() -> create_objects(Pid, Bucket, N, P, B) end),
+  io:format("Setup time: ~ps~n", [Dt / (1000 * 1000)]),
+  riak_ops:disconnect(Pid),
+  ok.
+
+%% i.e. riak_setup:symm_onesided("127.0.0.1", <<"set_a">>, 1000, 1024).
+symm_onesided(Ip, Bucket, N, B) ->
+  nuclear(),
+  Pid = riak_ops:connect(Ip),
+  riak_ops:configure_bucket(Pid, Bucket),
+  io:format("Creating objects~n", []),
+  {Dt, _} = timer:tc(fun() -> create_objects_onesided(Pid, Bucket, N, B) end),
   io:format("Setup time: ~ps~n", [Dt / (1000 * 1000)]),
   riak_ops:disconnect(Pid),
   ok.
@@ -63,7 +75,8 @@ nuclear() ->
   os:cmd("sudo -H -u riak riak stop"),
   os:cmd("sudo rm -rf /var/lib/riak/bitcask/*"),
   os:cmd("sudo -H -u riak riak start"),
-  timer:sleep(1000),
+  io:format("Giving riak time to restart.~n"),
+  timer:sleep(10000),
   "pong\n" = os:cmd("sudo -H -u riak riak ping").
 
 %% i.e. riak_setup:count("127.0.0.1", <<"set_a">>).
@@ -97,6 +110,12 @@ create_objects(Pid, Bucket, N, P, B) ->
   Resolve = fun(_, _) -> error(existing_object) end,
   [riak_ops:put(Pid, Bucket, Key, Value, Resolve) || {Key, Value} <- L],
   Expected.
+
+create_objects_onesided(Pid, Bucket, N, B) ->
+  L = symmetric_dataset:create_onesided(N, B),
+  Resolve = fun(_, _) -> error(existing_object) end,
+  [riak_ops:put(Pid, Bucket, Key, Value, Resolve) || {Key, Value} <- L],
+  ok.
 
 node_name() ->
   {ok, Name} = config:get_nested([node, name]),

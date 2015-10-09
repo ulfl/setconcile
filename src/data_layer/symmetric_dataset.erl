@@ -2,6 +2,7 @@
 -module(symmetric_dataset).
 
 -export([create/3]).
+-export([create_onesided/2]).
 -export([verify/2]).
 
 %% Return a new dataset of key/value pairs for nodes A and B. For each
@@ -33,6 +34,10 @@ create(N, P, NumBulkBytes) when (trunc(N*P) > 0) and
   {A, B} = new_or_updated(New, Updated),
   Expected = Shared ++ New ++ update(Updated),
   {A ++ Shared, B ++ Shared, Expected}.
+
+create_onesided(N, NumBulkBytes) when (NumBulkBytes rem 16 =:= 0) ->
+  random:seed({1, 2, 3}),
+  base([], N, NumBulkBytes).
 
 base(L, 0, _NumBulkBytes) -> L;
 base(L, N, NumBulkBytes)  ->
