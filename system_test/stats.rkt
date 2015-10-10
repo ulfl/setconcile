@@ -12,14 +12,15 @@
 (define dbg (lambda (fmt . args)
               (date-display-format 'iso-8601)
               (let ((date (date->string (current-date) #t)))
-                (apply printf (cons (string-append "~a: " fmt) (cons date args))))
+                (apply printf (cons (string-append "~a: " fmt "~n")
+                                    (cons date args))))
               (flush-output (current-output-port))))
 
 (define (cmd x) (string-trim (with-output-to-string (lambda() (system x)))))
 (define (cmddbg x)
-  (dbg "executing: ~a~n" x)
+  (dbg "executing: ~a" x)
   (let ((res (cmd x)))
-    (dbg "done~n")
+    (dbg "done")
     res))
 
 (define (node-a) (cmd "~/bin/terraform output node_a"))
@@ -49,14 +50,14 @@
     (cmddbg "~/bin/terraform apply --var-file=~/.aws/credentials.tf"))
   
   (reinitialize-nodes)
-  (dbg "AWS initialization done.~n")
+  (dbg "AWS initialization done.")
   (let ((a (node-a)) (b (node-b)))
-    (dbg "Configuring and starting setconcile.~n")
+    (dbg "Configuring and starting setconcile.")
     (configure-and-start-setconcile a a b)
     (configure-and-start-setconcile b a b)
-    (dbg "Waiting for setconcile to start.~n")
+    (dbg "Waiting for setconcile to start.")
     (sleep 120) ;; Give setconcile time to start.
-    (dbg "Done starting setconcile.~n")))
+    (dbg "Done starting setconcile.")))
 
 (define (ping-retry ip)
   (let iter ((count 3))
@@ -69,7 +70,7 @@
                     (res (engine-result eng)))
                (cond ((eq? res 'ok) 'ok)
                      (else
-                      (dbg "retrying ping~n")
+                      (dbg "retrying ping.")
                       (sleep 5)
                       (iter (- count 1)))))))))
 
@@ -97,7 +98,11 @@
   (let-values (((status headers in)
                 (http-sendrecv ip "/api/datasets/riak_set_a/recons" #:port 7363
                                #:method "POST")))
-    (read-json in)))
+    (dbg "Recons call done (status=~a, headers=~a). Reading result." status
+         headers)
+    (let ((json (read-json in)))
+      (dbg "Read JSON result.")
+      json)))
 
 (define (assemble-result bloom-false-probability response)
   (let* ((ds-size (hash-ref response 'ds_size))
@@ -120,9 +125,9 @@
 (define (test outf n p bulk (range #f) (samples 3))
   (fprintf outf "false-probability, transfer-ratio, bloom-size, its, time~n")
   (for ((bloom-false-probability (or range (in-range 0.001 0.5 0.1))))
-    (dbg " false-probability=~a~n" bloom-false-probability)
+    (dbg " false-probability=~a" bloom-false-probability)
     (for ((tries (in-range 0 samples)))
-      (dbg "  sample=~a~n" tries)
+      (dbg "  sample=~a" tries)
 
       ;; Setting up the db is slow, so reinitializing using a
       ;; preconfigured AMI is quicker. Assumes the AMI has already
@@ -131,15 +136,15 @@
       (reinitialize-nodes-from-ami)
       
       (let ((a (node-a)) (b (node-b)))
-        (dbg "Setting false probability.~n")
+        (dbg "Setting false probability.")
         (ping-retry a) (ping-retry b)
         (config-bloom a bloom-false-probability)
         (config-bloom b bloom-false-probability)
 
-        (dbg "Starting reconciliation.~n")
+        (dbg "Starting reconciliation.")
         (let ((res (reconcile a)))
           ;; FIXME: Add verification of result.
-          (dbg "Reconciliation done.~n")
+          (dbg "Reconciliation done.")
           (displayln (assemble-result bloom-false-probability res) outf)
           (flush-output outf))))))
 
@@ -155,7 +160,7 @@
     (cmd (format "./plot.R ~s ~s" file
                  (format "n=~a, p=~a, bulk=~a, runtime=~a" n p bulk
                          (format-runtime dt))))
-    (dbg "done~n")))
+    (dbg "done")))
 
 (define (file-name n p bulk)
   (let ((git-revision (cmd "git rev-parse --short HEAD"))
@@ -173,7 +178,7 @@
 
 (define (all)
   (for ((p (in-list (list 'onesided))))
-    (printf "Testing with p=~a~n" p)
+    (dbg "Testing with p=~a" p)
     (sleep 1)
     (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.2 0.3 0.4 0.5 0.6))))
   (beep))
