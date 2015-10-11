@@ -1,11 +1,5 @@
-.PHONY: compile test
+PROJECT = ebloom
 
-all: compile test
+ERLC_OPTS = +debug_info
 
-compile:
-	@./rebar compile
-
-clean:
-	./rebar clean
-
-include tools.mk
+include erlang.mk

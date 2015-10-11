@@ -1,3 +1,0 @@
-:name "setconcile"
-:node-sname "setconcile"
-:lib-dirs '("." "deps")

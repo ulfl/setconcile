@@ -1,7 +1,8 @@
 {application, bear,
  [
   {description, ""},
-  {vsn, git},
+  {vsn, "0.8.2"},
+  {modules, []},
   {registered, []},
   {applications, []},
   {env, []}
