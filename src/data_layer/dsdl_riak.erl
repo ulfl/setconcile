@@ -59,7 +59,7 @@ map(Pid, Bucket) ->
             end
      end.",
 
-  {Dt, L} =
+  {_Dt, L} =
     timer:tc(
       fun() ->
           Res = riakc_pb_socket:mapred(Pid, Bucket, [{map, {strfun, F}, "myarg",

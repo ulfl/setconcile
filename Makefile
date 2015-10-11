@@ -19,6 +19,6 @@ dep_hackney  = git https://github.com/benoitc/hackney.git 1.3.2
 dep_riak_pb  = git https://github.com/basho/riak_pb.git 1.4.4.0
 dep_riakc    = git https://github.com/basho/riak-erlang-client.git 1.4.2
 
-ERLC_OPTS = +debug_info +"{parse_transform, lager_transform}"
+ERLC_OPTS = +debug_info -Werror +"{parse_transform, lager_transform}"
 
 include erlang.mk

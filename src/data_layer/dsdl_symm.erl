@@ -15,7 +15,7 @@ new(Node, N, P, B) ->
 %%%_* Internal =========================================================
 prep(State = {Dict, _}) -> {size(dict:to_list(Dict), 0), State}.
 
-get(State = {Dict, _}) -> dict:to_list(Dict).
+get(_State = {Dict, _}) -> dict:to_list(Dict).
 
 get_vals(_State, L) -> L.
 
