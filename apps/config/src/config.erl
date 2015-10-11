@@ -64,7 +64,7 @@ get_nested([H | T], Map) ->
     {false, _} -> error
   end.
 
-set_nested([], Val, _Map)     -> error;
+set_nested([], _Val, _Map)    -> error;
 set_nested([H | T], Val, Map) ->
   case {maps:is_key(H, Map), T} of
     {true, []} -> maps:put(H, Val, Map);
