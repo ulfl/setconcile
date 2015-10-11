@@ -1,9 +1,11 @@
 PROJECT = setconcile
 
+LOCAL_DEPS = lager config ebloom
+
 DEPS  = cowboy hackney meck bear folsom jsx erlcron
 DEPS += riak_pb riakc
 
-dep_cowboy   = git https://github.com/ninenines/cowboy.git 1.0.1
+dep_cowboy   = git https://github.com/ninenines/cowboy.git 1.0.3
 dep_hackney  = git https://github.com/benoitc/hackney.git 1.1.0
 dep_meck     = git https://github.com/eproxus/meck.git 0.8.2
 dep_bear     = git https://github.com/boundary/bear.git 0.8.2
