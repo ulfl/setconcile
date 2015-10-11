@@ -180,7 +180,7 @@
   (for ((p (in-list (list 'onesided))))
     (dbg "Testing with p=~a" p)
     (sleep 1)
-    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.2 0.3 0.4 0.5 0.6) 1)))
+    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.2 0.3 0.4 0.5 0.6)) 1))
   (beep))
 
 (define (pmap f xs)
