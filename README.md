@@ -47,7 +47,7 @@ Percent of dataset that differs  | Best sync time (excluding mapreduce time)
 0.1%                             |  ~50 s
 1%                               |  1.5 min
 10%                              |  6.5 min
-
+100% (only data on site A)       |  43 min
 
 References
 ----------
