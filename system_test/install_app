@@ -11,12 +11,12 @@ sed -i '' -e "s/NodeAIp = .*,/NodeAIp = \"${NODE_A}\",/" app_config.txt
 sed -i '' -e "s/NodeBIp = .*,/NodeBIp = \"${NODE_B}\",/" app_config.txt
 
 # Sync over code and config to Node A.
-rsync -av --delete -e "/usr/bin/ssh -o 'StrictHostKeyChecking no' -i ${SSH_KEY}" ../_rel ubuntu@${NODE_A}:/opt/setconcile
+rsync -av --delete -e "/usr/bin/ssh -o 'StrictHostKeyChecking no' -i ${SSH_KEY}" ../_rel/setconcile/ ubuntu@${NODE_A}:/opt/setconcile/app
 sed -i '' -e "s/Node = .*,/Node = a,/" app_config.txt
 scp -o "StrictHostKeyChecking no" -i ${SSH_KEY} app_config.txt ubuntu@${NODE_A}:/opt/setconcile/etc/config.txt
 
 # Sync over code and config to Node B.
-rsync -av --delete -e "/usr/bin/ssh -o 'StrictHostKeyChecking no' -i ${SSH_KEY}" ../_rel ubuntu@${NODE_B}:/opt/setconcile
+rsync -av --delete -e "/usr/bin/ssh -o 'StrictHostKeyChecking no' -i ${SSH_KEY}" ../_rel/setconcile/ ubuntu@${NODE_B}:/opt/setconcile/app
 sed -i '' -e "s/Node = .*,/Node = b,/" app_config.txt
 scp -o "StrictHostKeyChecking no" -i ${SSH_KEY} app_config.txt ubuntu@${NODE_B}:/opt/setconcile/etc/config.txt
 
