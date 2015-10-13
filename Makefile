@@ -10,11 +10,15 @@ PROJECT = setconcile
 #    folsom 0.8.2. (https://github.com/boundary/folsom.git)
 #    bear 0.8.2.
 #    meck 0.8.2.
-LOCAL_DEPS = lager config ebloom jsx erlcron folsom bear meck
+# * Cowboy
+#    cowboy 1.0.3
+#    cowlib 1.0.1
+#    ranch  1.1.0
+LOCAL_DEPS  = lager config ebloom jsx erlcron folsom bear meck
+LOCAL_DEPS += ranch cowlib cowboy
 
-DEPS  = cowboy hackney riak_pb riakc
+DEPS  = hackney riak_pb riakc
 
-dep_cowboy   = git https://github.com/ninenines/cowboy.git 1.0.3
 dep_hackney  = git https://github.com/benoitc/hackney.git 1.3.2
 dep_riak_pb  = git https://github.com/basho/riak_pb.git 1.4.4.0
 dep_riakc    = git https://github.com/basho/riak-erlang-client.git 1.4.2
