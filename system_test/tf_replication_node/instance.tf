@@ -5,8 +5,10 @@ variable "key_file" {}
 variable "region" { }
 variable "amis" {
     default = {
-        us-east-1 = "ami-c980c8ac" # 16bf07f-1M-none-1024-nodeb.
-        eu-west-1 = "ami-9382b3e4" # 16bf07f-1M-all-1024-nodea.
+        eu-west-1 = "ami-8d7241fa" # ddc4415-1M-0.01-1024-nodea
+        us-east-1 = "ami-b1bcf6d4" # ddc4415-1M-0.01-1024-nodeb.
+#        us-east-1 = "ami-c980c8ac" # 16bf07f-1M-none-1024-nodeb.
+#        eu-west-1 = "ami-9382b3e4" # 16bf07f-1M-all-1024-nodea.
 #        us-east-1 = "ami-6957190c" # b8cdaac-1M-none-1024-nodeb.
 #        eu-west-1 = "ami-7b75440c" # b8cdaac-1M-all-1024-nodea.
 #        eu-west-1 = "ami-13665164" # b7bfacc-1M-0.01-1024-nodea.

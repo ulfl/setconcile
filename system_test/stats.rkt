@@ -36,7 +36,7 @@
                 ubuntu@"@"@host 'sed -i -e "s/NodeBIp = .*,/NodeBIp =
                 \"@|b|\",/" /opt/setconcile/etc/config.txt'})
          (c3 @f{ssh -o 'StrictHostKeyChecking no' -i ~/.ssh/pgw.pem
-                ubuntu@"@"@host /opt/setconcile/_rel/setconcile/bin/setconcile
+                ubuntu@"@"@host /opt/setconcile/app/bin/setconcile
                 start}))
     (cmddbg c1)
     (cmddbg c2)
@@ -177,10 +177,11 @@
 (define (quick2) (test/log 400 0.1 16 (in-range 0.001 0.9 0.1) 1))
 
 (define (all)
-  (for ((p (in-list (list 'onesided))))
+  (for ((p (in-list (list 0.01))))
     (dbg "Testing with p=~a" p)
     (sleep 1)
-    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.2 0.3 0.4 0.5 0.6)) 1))
+    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.5
+                                              0.6))))
   (beep))
 
 (define (pmap f xs)
