@@ -14,12 +14,14 @@ PROJECT = setconcile
 #    cowboy 1.0.3
 #    cowlib 1.0.1
 #    ranch  1.1.0
+# * Hackney
+#    hackney 1.3.2
+#    ssl_verify_hostname 1.0.5
+#    erlang-idna 1.0.2
 LOCAL_DEPS  = lager config ebloom jsx erlcron folsom bear meck
-LOCAL_DEPS += ranch cowlib cowboy
+LOCAL_DEPS += ranch cowlib cowboy ssl_verify_hostname erlang-idna hackney
 
-DEPS  = hackney riak_pb riakc
-
-dep_hackney  = git https://github.com/benoitc/hackney.git 1.3.2
+DEPS = riak_pb riakc
 dep_riak_pb  = git https://github.com/basho/riak_pb.git 1.4.4.0
 dep_riakc    = git https://github.com/basho/riak-erlang-client.git 1.4.2
 
