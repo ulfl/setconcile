@@ -19,7 +19,7 @@ PROJECT = setconcile
 #    ssl_verify_hostname 1.0.5
 #    erlang-idna 1.0.2
 LOCAL_DEPS  = lager config ebloom jsx erlcron folsom bear meck
-LOCAL_DEPS += ranch cowlib cowboy ssl_verify_hostname erlang-idna hackney
+LOCAL_DEPS += ranch cowlib cowboy ssl_verify_hostname idna hackney
 
 DEPS = riak_pb riakc
 dep_riak_pb  = git https://github.com/basho/riak_pb.git 1.4.4.0
