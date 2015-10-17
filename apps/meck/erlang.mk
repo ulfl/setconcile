@@ -16,7 +16,7 @@
 
 ERLANG_MK_FILENAME := $(realpath $(lastword $(MAKEFILE_LIST)))
 
-ERLANG_MK_VERSION = 2.0.0-pre.1-1-g73532c2
+ERLANG_MK_VERSION = 2.0.0-pre.1-13-gb581428
 
 # Core configuration.
 
@@ -3112,6 +3112,14 @@ pkg_redo_fetch = git
 pkg_redo_repo = https://github.com/jkvor/redo
 pkg_redo_commit = master
 
+PACKAGES += reload_mk
+pkg_reload_mk_name = reload_mk
+pkg_reload_mk_description = Live reload plugin for erlang.mk.
+pkg_reload_mk_homepage = https://github.com/bullno1/reload.mk
+pkg_reload_mk_fetch = git
+pkg_reload_mk_repo = https://github.com/bullno1/reload.mk
+pkg_reload_mk_commit = master
+
 PACKAGES += reltool_util
 pkg_reltool_util_name = reltool_util
 pkg_reltool_util_description = Erlang reltool utility functionality application
@@ -4167,6 +4175,7 @@ define dep_autopatch_rebar.erl
 	Write("IGNORE_DEPS += edown eper eunit_formatters meck node_package "
 		"rebar_lock_deps_plugin rebar_vsn_plugin reltool_util\n"),
 	Write("C_SRC_DIR = /path/do/not/exist\n"),
+	Write("C_SRC_TYPE = rebar\n"),
 	Write("DRV_CFLAGS = -fPIC\nexport DRV_CFLAGS\n"),
 	Write(["ERLANG_ARCH = ", rebar_utils:wordsize(), "\nexport ERLANG_ARCH\n"]),
 	fun() ->
@@ -4850,7 +4859,7 @@ ebin/$(PROJECT).app:: $(ERL_FILES) $(CORE_FILES)
 	$(if $(strip $?),$(call compile_erl,$?))
 	$(eval GITDESCRIBE := $(shell git describe --dirty --abbrev=7 --tags --always --first-parent 2>/dev/null || true))
 	$(eval MODULES := $(patsubst %,'%',$(sort $(notdir $(basename \
-		$(filter-out $(ERLC_EXCLUDE_PATHS),$(ERL_FILES) $(CORE_FILES)))))))
+		$(filter-out $(ERLC_EXCLUDE_PATHS),$(ERL_FILES) $(CORE_FILES) $(BEAM_FILES)))))))
 ifeq ($(wildcard src/$(PROJECT).app.src),)
 	$(app_verbose) printf "$(subst $(newline),\n,$(subst ",\",$(call app_file,$(GITDESCRIBE),$(MODULES))))" \
 		> ebin/$(PROJECT).app
@@ -5527,10 +5536,6 @@ CXXFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 
 LDLIBS += -L $(ERL_INTERFACE_LIB_DIR) -lerl_interface -lei
 
-ifeq ($(C_SRC_TYPE),shared)
-LDFLAGS += -shared
-endif
-
 # Verbosity.
 
 c_verbose_0 = @echo " C     " $(?F);
@@ -5572,7 +5577,9 @@ test-build:: $(C_SRC_ENV) $(C_SRC_OUTPUT)
 
 $(C_SRC_OUTPUT): $(OBJECTS)
 	$(verbose) mkdir -p priv/
-	$(link_verbose) $(CC) $(OBJECTS) $(LDFLAGS) $(LDLIBS) -o $(C_SRC_OUTPUT)
+	$(link_verbose) $(CC) $(OBJECTS) \
+		$(LDFLAGS) $(if $(filter $(C_SRC_TYPE),shared),-shared) $(LDLIBS) \
+		-o $(C_SRC_OUTPUT)
 
 %.o: %.c
 	$(COMPILE_C) $(OUTPUT_OPTION) $<
@@ -5847,7 +5854,7 @@ distclean-elvis:
 
 # Configuration.
 
-DTL_FULL_PATH ?= 0
+DTL_FULL_PATH ?=
 DTL_PATH ?= templates/
 DTL_SUFFIX ?= _dtl
 
@@ -5860,10 +5867,10 @@ dtl_verbose = $(dtl_verbose_$(V))
 
 define erlydtl_compile.erl
 	[begin
-		Module0 = case $(DTL_FULL_PATH) of
-			0 ->
+		Module0 = case "$(strip $(DTL_FULL_PATH))" of
+			"" ->
 				filename:basename(F, ".dtl");
-			1 ->
+			_ ->
 				"$(DTL_PATH)" ++ F2 = filename:rootname(F, ".dtl"),
 				re:replace(F2, "/",  "_",  [{return, list}, global])
 		end,
@@ -5877,7 +5884,16 @@ define erlydtl_compile.erl
 endef
 
 ifneq ($(wildcard src/),)
-ebin/$(PROJECT).app:: $(sort $(call core_find,$(DTL_PATH),*.dtl))
+
+DTL_FILES = $(sort $(call core_find,$(DTL_PATH),*.dtl))
+
+ifdef DTL_FULL_PATH
+BEAM_FILES += $(addprefix ebin/,$(patsubst %.dtl,%_dtl.beam,$(subst /,_,$(DTL_FILES:$(DTL_PATH)%=%))))
+else
+BEAM_FILES += $(addprefix ebin/,$(patsubst %.dtl,%_dtl.beam,$(notdir $(DTL_FILES))))
+endif
+
+ebin/$(PROJECT).app:: $(DTL_FILES)
 	$(if $(strip $?),\
 		$(dtl_verbose) $(call erlang,$(call erlydtl_compile.erl,$?,-pa ebin/ $(DEPS_DIR)/erlydtl/ebin/)))
 endif
