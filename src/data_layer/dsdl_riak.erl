@@ -54,19 +54,13 @@ unprep({Ip, Bucket, Resolver, Pid, _Keys, _MapFunStr}) ->
   riak_ops:disconnect(Pid),
   {Ip, Bucket, Resolver, no_pid, no_keys}.
 
-map(Pid, Bucket, F) ->
-  {_Dt, L} =
-    timer:tc(
-      fun() ->
-          Res = riakc_pb_socket:mapred(Pid, Bucket, [{map, {strfun, F}, "myarg",
-                                                      true}], 3600000),
-          L = case Res of
-                {ok, [{0, X}]} -> X;
-                {ok, []} -> []
-              end,
-          L
-      end),
-  L.
+map(Pid, Bucket, MapFunStr) ->
+  Res = riakc_pb_socket:mapred(Pid, Bucket, [{map, {strfun, MapFunStr}, "myarg",
+                                              true}], 3600000),
+  case Res of
+    {ok, [{0, X}]} -> X;
+    {ok, []} -> []
+  end.
 
 default_map_fun() ->
   "fun({error, notfound}, _, _)   -> [];
