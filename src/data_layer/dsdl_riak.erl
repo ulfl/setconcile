@@ -52,8 +52,7 @@ map(Pid, Bucket) ->
               <<>>  ->
                 [];
               [Val] ->
-                Bin = term_to_binary(Val),
-                [{riak_object:key(Obj), byte_size(Bin), crypto:sha(Val)}];
+                [{riak_object:key(Obj), byte_size(Val), crypto:sha(Val)}];
               _     ->
                 []
             end
