@@ -44,8 +44,7 @@ put(Pid, Bucket, Key, Value, Resolver) ->
       {error, notfound} ->
         {riakc_obj:new(Bucket, Key, term_to_binary(Value)), Value};
       {ok, Obj} ->
-        Values = [binary_to_term(X) || X <- riakc_obj:get_values(Obj)],
-        Resolved = do_resolve([Value | Values], Resolver),
+        Resolved = do_resolve([Value | get_values(Obj)], Resolver),
         {riakc_obj:update_value(Obj, term_to_binary(Resolved)), Resolved}
     end,
   ok = riakc_pb_socket:put(Pid, NewObj, [{w, quorum}, {dw, one}], 5000),
@@ -55,8 +54,7 @@ put(Pid, Bucket, Key, Value, Resolver) ->
 %% they are resolved. FIXME: what if object deleted?
 get(Pid, Bucket, Key, Resolver) ->
   {ok, Obj} = riakc_pb_socket:get(Pid, Bucket, Key),
-  Values = [binary_to_term(X) || X <- riakc_obj:get_values(Obj)],
-  do_resolve(Values, Resolver).
+  do_resolve(get_values(Obj), Resolver).
 
 do_resolve([H], _Resolver)   ->
   H;
@@ -64,3 +62,5 @@ do_resolve([H|T], Resolver) ->
   F = fun(X, A) -> Resolver(X, A) end,
   lists:foldl(F, H, T).
 
+get_values(RiakObj) ->
+  [binary_to_term(X) || X <- riakc_obj:get_values(RiakObj), X /= <<>>].
