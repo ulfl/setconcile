@@ -44,15 +44,15 @@ get_vals({_Ip, Bucket, Resolver, Pid, _KeyVals, _MapFunStr}, L) ->
   [{Key, riak_ops:get(Pid, Bucket, Key, Resolver)} || {Key, _HashedVal} <- L].
 
 %% Store a {Key, Value} pair.
-put({Ip, Bucket, Resolver, Pid, KeyVals, _MapFunStr}, {Key, Val}) ->
+put({Ip, Bucket, Resolver, Pid, KeyVals, MapFunStr}, {Key, Val}) ->
   NewVal = riak_ops:put(Pid, Bucket, Key, Val, Resolver),
   Hash = crypto:hash(sha, term_to_binary(NewVal)),
-  {Ip, Bucket, Resolver, Pid, dict:store(Key, Hash, KeyVals)}.
+  {Ip, Bucket, Resolver, Pid, dict:store(Key, Hash, KeyVals), MapFunStr}.
 
 %% Cleanup after syncing is done.
-unprep({Ip, Bucket, Resolver, Pid, _Keys, _MapFunStr}) ->
+unprep({Ip, Bucket, Resolver, Pid, _Keys, MapFunStr}) ->
   riak_ops:disconnect(Pid),
-  {Ip, Bucket, Resolver, no_pid, no_keys}.
+  {Ip, Bucket, Resolver, no_pid, no_keys, MapFunStr}.
 
 map(Pid, Bucket, MapFunStr) ->
   Res = riakc_pb_socket:mapred(Pid, Bucket, [{map, {strfun, MapFunStr}, "myarg",
