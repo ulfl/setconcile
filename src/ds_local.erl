@@ -64,3 +64,20 @@ bundle(0, L, A, F, S, MaxSize) ->
   bundle(MaxSize, L, [], F, S + F(A), MaxSize);
 bundle(X, [H | T], A, F, S, MaxSize) ->
   bundle(X - 1, T, [H | A], F, S, MaxSize).
+
+%%%_* Tests ============================================================
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+bundle_test() ->
+  Cnt = misc:make_counter(),
+  F = fun(L) ->
+          case Cnt(get) of
+            1 -> ?assertEqual([3, 2, 1], L);
+            2 -> ?assertEqual([6, 5, 4], L);
+            3 -> ?assertEqual([7], L)
+          end,
+          Cnt(inc),
+          42
+      end,
+  ?assertEqual(42 * 3, bundle([1, 2, 3, 4, 5, 6, 7], F, 3)).
+-endif.

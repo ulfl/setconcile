@@ -5,6 +5,7 @@
 -export([remote_dataset/1]).
 -export([get_ds_config/2]).
 -export([foreach_ds_config/1]).
+-export([make_counter/0]).
 
 local_dataset(DsName) -> get_ds_config(DsName, dataset).
 
@@ -21,3 +22,27 @@ get_ds_config(DsName, ConfigName) ->
 foreach_ds_config(Fun) ->
   {ok, Datasets} = config:get_nested([datasets]),
   maps:fold(fun(K, V, _) -> Fun(K, V) end, 0, Datasets).
+
+make_counter() ->
+  Loop = fun Loop() ->
+             receive
+               {Pid, Ref, inc} -> Cnt = get(count), put(count, Cnt + 1),
+                                  Pid ! {Ref, Cnt};
+               {Pid, Ref, get} -> Cnt = get(count), Pid ! {Ref, Cnt}
+             end,
+             Loop()
+         end,
+  Pid = spawn(fun() -> put(count, 1), Loop() end),
+  fun(inc) ->
+      Ref = make_ref(),
+      Pid ! {self(), Ref, inc},
+      receive
+        {Ref, Cnt} -> Cnt
+      end;
+     (get) ->
+      Ref = make_ref(),
+      Pid ! {self(), Ref, get},
+      receive
+        {Ref, Cnt} -> Cnt
+      end
+  end.
