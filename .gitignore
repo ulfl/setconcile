@@ -1,4 +1,8 @@
 *.beam
+*.d
+.erlang.mk.packages.v2
+.erlang.mk/
+.DS_Store
 deps/
 ebin/
 _rel/

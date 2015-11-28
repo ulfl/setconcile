@@ -16,18 +16,18 @@
 new(DbIp, Bucket, Resolver) ->
   new(DbIp, Bucket, Resolver, default_map_fun()).
 
-%% MapFunStr should be a string implementing a Riak map function.
-%% The map operation must return either [{Key, Size, Sha}] where
-%% Key is the object key, Size is the size of the value in bytes,
-%% and Sha is the SHA-128 value of the object, or the empty list
-%% if the value should be ignored.
+%% MapFunStr should be a string implementing a Riak map function. The
+%% map operation must return either [{Key, Size, Sha}] (where Key is the
+%% object key, Size is the size of the value in bytes, and Sha is the
+%% SHA-128 value of the object), or return the empty list if the value
+%% should be ignored.
 new(DbIp, Bucket, Resolver, MapFunStr) ->
   State = #state{
-    ip = DbIp,
-    bucket = Bucket,
-    resolver = Resolver,
-    map_fun_str = MapFunStr
-  },
+             ip = DbIp,
+             bucket = Bucket,
+             resolver = Resolver,
+             map_fun_str = MapFunStr
+            },
   {State, fun prep/1, fun get/1, fun get_vals/2, fun put/2, fun unprep/1}.
 
 %%%_* Internal =========================================================

@@ -56,7 +56,7 @@ start(_Type, _Args) ->
         case Schedule of
           false -> ok;
           _     ->
-            lager:info("Sceduling sync for ~p: ~p.", [DatasetName, Schedule]),
+            lager:info("Scheduling sync for ~p: ~p.", [DatasetName, Schedule]),
             erlcron:cron({Schedule, {reconcile, reconcile, [DatasetName]}})
         end
     end),
