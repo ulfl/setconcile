@@ -10,6 +10,15 @@
 -export([ping/1]).
 -export([stop/1]).
 
+-include("setconcile.hrl").
+
+-spec prep(dataset()) -> ok.
+-spec get_bloom(dataset()) -> reference().
+-spec transfer_missing(dataset(), reference(), dataset()) -> {non_neg_integer(),
+                                                              non_neg_integer()}.
+-spec store_elements(dataset(), [term()]) -> non_neg_integer().
+-spec unprep(dataset()) -> ok.
+
 %%%_* Common API =======================================================
 prep(Ds) -> _Size = gen_server:call(Ds, prep, infinity).
 
