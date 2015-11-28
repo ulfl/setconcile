@@ -1,6 +1,9 @@
 all:
 	mkdir -p ../priv
-	g++ ebloom_nifs.cpp -o ../priv/ebloom_nifs.so -fPIC -shared -I /usr/lib/erlang/usr/include/ -L /usr/lib/erlang/lib/erl_interface-3.7.20/lib -lstdc++ -lerl_interface -lei
+	echo ${ERTS_INCLUDE_DIR}
+	g++ ebloom_nifs.cpp -o ../priv/ebloom_nifs.so -fPIC -shared -I ${ERTS_INCLUDE_DIR} -L ${ERL_INTERFACE_LIB_DIR} -lstdc++ -lerl_interface -lei
 
 clean:
 	rm -f ebloom_nifs.o ../priv/ebloom_nifs.so
+
+include env.mk
