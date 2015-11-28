@@ -290,10 +290,11 @@ request(Method, URL, Headers, Body) ->
 %%  Assume close to signal end</code>. </li>
 %%  <li><code>{error, term()}</code> other errors.</li>
 %%  </ul>
--spec request(term(), url() | binary(), list(), term(), list())
-    -> {ok, integer(), list(), client_ref()}
-    | {ok, client_ref()}
-    | {error, term()}.
+-spec request(term(), url() | binary() | list(), list(), term() | binary(),
+              list())
+             -> {ok, integer(), list(), client_ref()}
+                  | {ok, client_ref()}
+                  | {error, term()}.
 request(Method, #hackney_url{}=URL0, Headers, Body, Options0) ->
     %% normalize the url encoding
     URL = hackney_url:normalize(URL0),

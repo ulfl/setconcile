@@ -27,4 +27,7 @@ dep_riakc    = git https://github.com/basho/riak-erlang-client.git 1.4.2
 
 ERLC_OPTS = +debug_info -Werror +"{parse_transform, lager_transform}"
 
+DIALYZER_DIRS = ./ebin
+DIALYZER_OPTS = 
+
 include erlang.mk

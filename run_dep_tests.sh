@@ -14,4 +14,4 @@ make -C apps/jsx eunit
 #make -C apps/lager eunit # build failure
 #make -C apps/meck eunit # build failure
 make -C apps/ranch eunit
-#make -C lager/ssl_verify_hostname eunit # some failures
+#make -C apps/ssl_verify_hostname eunit # some failures
