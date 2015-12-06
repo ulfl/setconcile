@@ -17,7 +17,7 @@ prep(Dict) -> {size(dict:to_list(Dict), 0), Dict}.
 
 get(Dict) -> dict:to_list(Dict).
 
-get_vals(_Dict, L) -> L.
+get_vals(Dict, L) -> {L, Dict}.
 
 put(Dict, {K, V1}) ->
   case dict:find(K, Dict) of

@@ -39,7 +39,7 @@ prep(#state{ip=Ip, bucket=Bucket, map_fun_str=MapFunStr}=State) ->
                {dict:from_list(KV), Size}
            end,
   {Dt, {KeyVals, Size}} = timer:tc(fun() -> DoPrep() end),
-  lager:info("dsdl_riak prep (num_elements=~p, size=~p, prep_time_s=~p).",
+  lager:info("dsdl_riak:prep (num_elements=~p, size=~p, prep_time_s=~p).",
              [dict:size(KeyVals), Size, Dt / (1000 * 1000)]),
   {Size, State#state{pid=Pid, key_vals=KeyVals}}.
 
@@ -47,9 +47,23 @@ prep(#state{ip=Ip, bucket=Bucket, map_fun_str=MapFunStr}=State) ->
 get(#state{key_vals=KeyVals}) -> dict:to_list(KeyVals).
 
 %% Given a list L of {Key, HashedVal} tuples, return the list of {Key,
-%% Val}, i.e. unhashed values.
-get_vals(#state{bucket=Bucket, resolver=Resolver, pid=Pid}, L) ->
-  [{Key, riak_ops:get(Pid, Bucket, Key, Resolver)} || {Key, _HashedVal} <- L].
+%% Val}, i.e. unhashed values. If a Key is found to be deleted, then
+%% then it is not included in the final restult and it is also removed
+%% from the current state.
+get_vals(#state{} = State, L) -> do_get_vals(State, L, []).
+
+do_get_vals(State, [], Result) -> {Result, State};
+do_get_vals(#state{key_vals=KeyVals, pid=Pid, bucket=Bucket,
+                   resolver=Resolver} = State0,
+            [{Key, _HashedVal} | T], Result) ->
+  case riak_ops:get(Pid, Bucket, Key, Resolver) of
+    not_found ->
+      State = State0#state{key_vals=dict:erase(Key, KeyVals)},
+      lager:info("dsdl_riak:get_vals: Key ~p deleted from state.", [Key]),
+      do_get_vals(State, T, Result);
+    {ok, Val} ->
+      do_get_vals(State0, T, [{Key, Val} | Result])
+  end.
 
 %% Store a {Key, Value} pair.
 put(#state{bucket=Bucket, resolver=Resolver, pid=Pid, key_vals=KeyVals}=State,

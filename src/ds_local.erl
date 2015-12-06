@@ -13,71 +13,78 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
-new(Name, {State, Prep, Get, GetVals, Put, Unprep}) ->
-  {ok, Ds} = gen_server:start_link(?MODULE, [Name, State, Prep, Get, GetVals,
+new(Name, {DsdlState, Prep, Get, GetVals, Put, Unprep}) ->
+  {ok, Ds} = gen_server:start_link(?MODULE, [Name, DsdlState, Prep, Get, GetVals,
                                              Put, Unprep], []),
   Ds.
 
 %%%_* Gen server callbacks =============================================
-init([Name, State, Prep, Get, GetVals, Put, Unprep]) ->
-  {ok, #{ds_name => Name, state => State, prep => Prep, get => Get,
+init([Name, DsdlState, Prep, Get, GetVals, Put, Unprep]) ->
+  {ok, #{ds_name => Name, dsdl_state => DsdlState, prep => Prep, get => Get,
          get_vals => GetVals, put => Put, unprep => Unprep}}.
 
-handle_call(prep, _From, #{state := State, prep := Prep} = S) ->
-  {Size, State1} = Prep(State),
-  {reply, Size, S#{state := State1}};
-handle_call(get_bloom, _From, #{ds_name := Name, state := State,
+handle_call(prep, _From, #{dsdl_state := DsdlState, prep := Prep} = S) ->
+  {Size, DsdlState1} = Prep(DsdlState),
+  {reply, Size, S#{dsdl_state := DsdlState1}};
+handle_call(get_bloom, _From, #{ds_name := Name, dsdl_state := DsdlState,
                                 get := Get} = S) ->
   FalseProbability = misc:get_ds_config(Name, bloom_false_probability),
-  Bloom = reconcile:create_bloom(Get(State), FalseProbability),
+  Bloom = reconcile:create_bloom(Get(DsdlState), FalseProbability),
   {reply, {ok, Bloom}, S};
 handle_call({transfer_missing, Bloom, DestDs}, _From,
-            #{ds_name := Name, state := State, get := Get,
+            #{ds_name := Name, dsdl_state := DsdlState0, get := Get,
               get_vals := GetVals} = S) ->
-  L = reconcile:filter(Get(State), Bloom, []),
+  L = reconcile:filter(Get(DsdlState0), Bloom, []),
   MaxSize = misc:get_ds_config(Name, max_transfer_bundle),
-  Size = bundle(L, fun(X) -> ds:store_elements(DestDs, GetVals(State, X)) end,
-                MaxSize),
-  {reply, {ok, {length(L), Size}}, S};
-handle_call({store_elements, L}, _From, #{state := State0,
+  {Size, DsdlState} = foreach_bundle(fun(Bundle, {Size, Dsdl0}) ->
+                                         {KeyVals, Dsdl} = GetVals(Dsdl0, Bundle),
+                                         X = ds:store_elements(DestDs, KeyVals),
+                                         {Size + X, Dsdl}
+                                     end, L, MaxSize, {0, DsdlState0}),
+  {reply, {ok, {length(L), Size}}, S#{dsdl_state := DsdlState}};
+handle_call({store_elements, L}, _From, #{dsdl_state := DsdlState0,
                                           put := Put} = S) ->
-  State = lists:foldl(fun(X, A) -> Put(A, X) end, State0, L),
-  {reply, {ok, byte_size(term_to_binary(L))}, S#{state := State}};
-handle_call(unprep, _From, #{state := State, unprep := Unprep} = S) ->
-  State1 = Unprep(State),
-  {reply, ok, S#{state := State1}}.
+  DsdlState = lists:foldl(fun(X, A) -> Put(A, X) end, DsdlState0, L),
+  {reply, {ok, byte_size(term_to_binary(L))}, S#{dsdl_state := DsdlState}};
+handle_call(unprep, _From, #{dsdl_state := DsdlState0, unprep := Unprep} = S) ->
+  DsdlState = Unprep(DsdlState0),
+  {reply, ok, S#{dsdl_state := DsdlState}}.
 
 handle_cast(Msg, S) -> {stop, {unexpected_cast, Msg}, S}.
 
 handle_info(Msg, S) -> {stop, {unexpected_info, Msg}, S}.
 
-terminate(_Reason, _State) -> ok.
+terminate(_Reason, _S) -> ok.
 
-code_change(_OldVsn, State, _Extra) -> {ok, State}.
+code_change(_OldVsn, S, _Extra) -> {ok, S}.
 
 %%%_* Internal =========================================================
-bundle(L, F, MaxSize) -> bundle(MaxSize, L, [], F, 0, MaxSize).
 
-bundle(_, [], A, F, S, _MaxSize) ->
-  S + F(A);
-bundle(0, L, A, F, S, MaxSize) ->
-  bundle(MaxSize, L, [], F, S + F(A), MaxSize);
-bundle(X, [H | T], A, F, S, MaxSize) ->
-  bundle(X - 1, T, [H | A], F, S, MaxSize).
+%% Call F for a bundle of MaxSize elements out of L at a time. The State
+%% variable is threaded through all calls to F.
+foreach_bundle(F, L, MaxSize, State) ->
+  foreach_bundle(F, L, MaxSize, State, MaxSize, []).
+
+foreach_bundle(F, [], _MaxSize, State, _Cnt, Acc) ->
+  F(Acc, State);
+foreach_bundle(F, L, MaxSize, State, 0, Acc) ->
+  foreach_bundle(F, L, MaxSize, F(Acc, State), MaxSize, []);
+foreach_bundle(F, [H | T], MaxSize, State, Cnt, Acc) ->
+  foreach_bundle(F, T, MaxSize, State, Cnt - 1, [H | Acc]).
 
 %%%_* Tests ============================================================
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
-bundle_test() ->
+foreach_bundle_test() ->
   Cnt = misc:make_counter(),
-  F = fun(L) ->
+  F = fun(L, State) ->
           case Cnt(get) of
             1 -> ?assertEqual([3, 2, 1], L);
             2 -> ?assertEqual([6, 5, 4], L);
             3 -> ?assertEqual([7], L)
           end,
           Cnt(inc),
-          42
+          State + 1
       end,
-  ?assertEqual(42 * 3, bundle([1, 2, 3, 4, 5, 6, 7], F, 3)).
+  ?assertEqual(3, foreach_bundle(F, [1, 2, 3, 4, 5, 6, 7], 3, 0)).
 -endif.

@@ -17,9 +17,9 @@ prep(State = {Dict, _}) -> {size(dict:to_list(Dict), 0), State}.
 
 get(_State = {Dict, _}) -> dict:to_list(Dict).
 
-get_vals(_State, L) -> L.
+get_vals(State, L) -> {L, State}.
 
-put({Dict, Expected}, {K, V1}) ->
+put(_State = {Dict, Expected}, {K, V1}) ->
   case dict:find(K, Dict) of
     error    -> {dict:store(K, V1, Dict), Expected};
     {ok, V2} -> {dict:store(K, resolve(V1, V2), Dict), Expected}

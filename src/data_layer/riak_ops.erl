@@ -9,6 +9,7 @@
 -export([count/2]).
 -export([put/5]).
 -export([get/4]).
+-export([delete/3]).
 
 connect(Ip) ->
   {ok, Pid} = riakc_pb_socket:start(Ip, 8087, [{connect_timeout, 5000},
@@ -51,12 +52,17 @@ put(Pid, Bucket, Key, Value, Resolver) ->
   NewValue.
 
 %% Get the current value for Key in the DB. In case there are siblings
-%% they are resolved. FIXME: what if object deleted?
+%% they are resolved.
 get(Pid, Bucket, Key, Resolver) ->
-  {ok, Obj} = riakc_pb_socket:get(Pid, Bucket, Key),
-  do_resolve(get_values(Obj), Resolver).
+  case riakc_pb_socket:get(Pid, Bucket, Key) of
+    {error, notfound} -> not_found;
+    {ok, Obj}         -> {ok, do_resolve(get_values(Obj), Resolver)}
+  end.
 
-do_resolve([H], _Resolver)   ->
+%% Delete the Key from the DB.
+delete(Pid, Bucket, Key) -> riakc_pb_socket:delete(Pid, Bucket, Key).
+
+do_resolve([H], _Resolver)  ->
   H;
 do_resolve([H|T], Resolver) ->
   F = fun(X, A) -> Resolver(X, A) end,
