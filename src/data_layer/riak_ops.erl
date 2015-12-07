@@ -48,8 +48,10 @@ put(Pid, Bucket, Key, Value, Resolver) ->
         Resolved = do_resolve([Value | get_values(Obj)], Resolver),
         {riakc_obj:update_value(Obj, term_to_binary(Resolved)), Resolved}
     end,
-  ok = riakc_pb_socket:put(Pid, NewObj, [{w, quorum}, {dw, one}], 5000),
-  NewValue.
+  case riakc_pb_socket:put(Pid, NewObj, [{w, quorum}, {dw, one}], 5000) of
+    ok             -> {ok, NewValue};
+    E = {error, _} -> E
+  end.
 
 %% Get the current value for Key in the DB. In case there are siblings
 %% they are resolved.

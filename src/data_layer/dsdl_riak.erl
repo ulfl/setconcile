@@ -65,12 +65,18 @@ do_get_vals(#state{key_vals=KeyVals, pid=Pid, bucket=Bucket,
       do_get_vals(State0, T, [{Key, Val} | Result])
   end.
 
-%% Store a {Key, Value} pair.
+%% Store a {Key, Value} pair. Write errors are ignored. I.e. there will
+%% be a retry on the next sync iteration.
 put(#state{bucket=Bucket, resolver=Resolver, pid=Pid, key_vals=KeyVals}=State,
     {Key, Val}) ->
-  NewVal = riak_ops:put(Pid, Bucket, Key, Val, Resolver),
-  Hash = crypto:hash(sha, term_to_binary(NewVal)),
-  State#state{key_vals=dict:store(Key, Hash, KeyVals)}.
+  case riak_ops:put(Pid, Bucket, Key, Val, Resolver) of
+    {ok, NewVal} ->
+      Hash = crypto:hash(sha, term_to_binary(NewVal)),
+      State#state{key_vals=dict:store(Key, Hash, KeyVals)};
+    {error, Err} ->
+      lager:error("Write error: ~p", [Err]),
+      State
+  end.
 
 %% Cleanup after syncing is done.
 unprep(#state{pid=Pid}=State) ->
