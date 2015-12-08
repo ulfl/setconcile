@@ -48,7 +48,7 @@ get(#state{key_vals=KeyVals}) -> dict:to_list(KeyVals).
 
 %% Given a list L of {Key, HashedVal} tuples, return the list of {Key,
 %% Val}, i.e. unhashed values. If a Key is found to be deleted, then
-%% then it is not included in the final restult and it is also removed
+%% then it is not included in the final result and it is also removed
 %% from the current state.
 get_vals(#state{} = State, L) -> do_get_vals(State, L, []).
 
