@@ -1,7 +1,8 @@
 PROJECT = setconcile
 
 # Versions used for local (inlined) deps:
-# * lager: 2.1.1. (https://github.com/basho/lager.git)
+# * lager: 3.0.2. (https://github.com/basho/lager.git)
+#    goldrush 0.1.7
 # * config ee6bd88. (https://github.com/ulfl/config)
 # * ebloom: 2.0.0. (https://github.com/basho/ebloom.git)
 # * jsx 50eff66 (v2.8.0). (https://github.com/talentdeficit/jsx.git)
