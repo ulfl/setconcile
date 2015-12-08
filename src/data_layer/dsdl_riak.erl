@@ -39,7 +39,7 @@ prep(#state{ip=Ip, bucket=Bucket, map_fun_str=MapFunStr}=State) ->
                {dict:from_list(KV), Size}
            end,
   {Dt, {KeyVals, Size}} = timer:tc(fun() -> DoPrep() end),
-  lager:info("dsdl_riak:prep (num_elements=~p, size=~p, prep_time_s=~p).",
+  lager:info("Prep done (num_elements=~p, size=~p, prep_time_s=~p).",
              [dict:size(KeyVals), Size, Dt / (1000 * 1000)]),
   {Size, State#state{pid=Pid, key_vals=KeyVals}}.
 
@@ -59,7 +59,7 @@ do_get_vals(#state{key_vals=KeyVals, pid=Pid, bucket=Bucket,
   case riak_ops:get(Pid, Bucket, Key, Resolver) of
     not_found ->
       State = State0#state{key_vals=dict:erase(Key, KeyVals)},
-      lager:info("dsdl_riak:get_vals: Key ~p deleted from state.", [Key]),
+      lager:info("Key ~p not found. Deleted from state.", [Key]),
       do_get_vals(State, T, Result);
     {ok, Val} ->
       do_get_vals(State0, T, [{Key, Val} | Result])
