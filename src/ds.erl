@@ -12,7 +12,7 @@
 
 -include("setconcile.hrl").
 
--spec prep(dataset()) -> ok.
+-spec prep(dataset()) -> {ok, integer()} | ok | error_sync_in_progress.
 -spec get_bloom(dataset()) -> reference().
 -spec transfer_missing(dataset(), reference(), dataset()) -> {non_neg_integer(),
                                                               non_neg_integer()}.
@@ -20,7 +20,10 @@
 -spec unprep(dataset()) -> ok.
 
 %%%_* Common API =======================================================
-prep(Ds) -> _Size = gen_server:call(Ds, prep, infinity).
+
+%% Prepare a dataset for syncing. Returns the size of the dataset in
+%% bytes or, for remote datasets, just 'ok'.
+prep(Ds) -> gen_server:call(Ds, prep, infinity).
 
 %% Get a bloom filter populated with the elements for this dataset.
 get_bloom(Ds) ->

@@ -11,34 +11,49 @@ reconcile(DsName) ->
 
   %% Prep both sides simultaneously.
   lager:info("Prepping dataset for sync (dataset=~p).", [DsName]),
-  {PrepTime, [DsSize, _]} =
+  {PrepTime, [R1, R2]} =
     timer:tc(fun() ->
                  plists:map(fun(F) -> F() end,
                             [fun() -> ds:prep(LocalDs) end,
                              fun() -> ds:prep(RemoteDs) end],
                             {processes, 2})
              end),
-  lager:info("Prepping done (time_s=~.2f).", [sec(PrepTime)]),
+  case (R1 =:= error_sync_in_progress) or (R2 =:= error_sync_in_progress) of
+    false ->
+      {ok, LocalDsSize} = R1,
+      lager:info("Prepping done (time_s=~.2f).", [sec(PrepTime)]),
+      reconcile_and_print_stats(DsName, LocalDs, LocalDsSize, RemoteDs,
+                                PrepTime),
+      ds:unprep(LocalDs),
+      ds:unprep(RemoteDs);
+    true ->
+      error("Sync attempt failed since a sync is already in progress.")
+  end.
 
-  Converged = misc:get_ds_config(DsName, converged),
-  {RecTime, {ok, Its, Stats}} =
-    timer:tc(fun() -> reconcile(DsName, LocalDs, RemoteDs, Converged) end),
+reconcile_and_print_stats(DsName, LocalDs, LocalDsSize, RemoteDs, PrepTime) ->
+  try
+    Converged = misc:get_ds_config(DsName, converged),
+    {RecTime, {ok, Its, Stats}} =
+      timer:tc(fun() -> reconcile(DsName, LocalDs, RemoteDs, Converged) end),
 
-  #{data_size := DataSize, bloom_size := BloomSize, tx_cnt := TxCnt,
-    rx_cnt := RxCnt} = Stats,
-  lager:info("Reconciliation done (dataset=~p, time_s=~.2f, its=~p, "
-             "data_size=~.2f MB, bloom_size=~.2f MB, tx_cnt=~p, rx_cnt=~p).",
-             [DsName, sec(RecTime), Its, mb(DataSize), mb(BloomSize), TxCnt, 
-              RxCnt]),
-  lager:info("Size of local dataset (dataset=~p, dataset_size=~.2fMB).",
-             [DsName, mb(DsSize)]),
-  lager:info("Ratio of transferred data to dataset size (dataset=~p, "
-             "size_ratio=~.3f).", [DsName, (DataSize + BloomSize) / DsSize]),
-
-  ds:unprep(LocalDs),
-  ds:unprep(RemoteDs),
-  Stats#{its => Its, ds_size => DsSize, prep_time => PrepTime,
-         rec_time => RecTime}.
+    #{data_size := DataSize, bloom_size := BloomSize, tx_cnt := TxCnt,
+      rx_cnt := RxCnt} = Stats,
+    lager:info("Reconciliation done (dataset=~p, time_s=~.2f, its=~p, "
+               "data_size=~.2f MB, bloom_size=~.2f MB, tx_cnt=~p, rx_cnt=~p).",
+               [DsName, sec(RecTime), Its, mb(DataSize), mb(BloomSize), TxCnt, 
+                RxCnt]),
+    lager:info("Size of local dataset (dataset=~p, dataset_size=~.2fMB).",
+               [DsName, mb(LocalDsSize)]),
+    lager:info("Ratio of transferred data to dataset size (dataset=~p, "
+               "size_ratio=~.3f).", [DsName, (DataSize + BloomSize) /
+                                       LocalDsSize]),
+    Stats#{its => Its, ds_size => LocalDsSize, prep_time => PrepTime,
+           rec_time => RecTime}
+  catch
+    C:E -> lager:error("Error during reconciliation (error={~p, ~p}, stack=~p).",
+                       [C, E, erlang:get_stacktrace()]),
+           #{ds_size => LocalDsSize, prep_time => PrepTime}
+  end.
 
 reconcile(DsName, LocalDs, RemoteDs, Converged) ->
   MaxIts = 25,
@@ -96,3 +111,7 @@ filter([H | T], B, Remainder)  ->
 mb(X) -> X / (1024 * 1024).
 
 sec(T) -> T / (1000 * 1000).
+
+%%%_* Tests ============================================================
+
+%% test bloom populate, filter. Check performance. Check false probability.

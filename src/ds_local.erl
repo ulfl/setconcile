@@ -23,9 +23,9 @@ init([Name, DsdlState, Prep, Get, GetVals, Put, Unprep]) ->
   {ok, #{ds_name => Name, dsdl_state => DsdlState, prep => Prep, get => Get,
          get_vals => GetVals, put => Put, unprep => Unprep}}.
 
-handle_call(prep, _From, #{dsdl_state := DsdlState, prep := Prep} = S) ->
-  {Size, DsdlState1} = Prep(DsdlState),
-  {reply, Size, S#{dsdl_state := DsdlState1}};
+handle_call(prep, _From, #{dsdl_state := DsdlState0, prep := Prep} = S) ->
+  {Result, DsdlState} = Prep(DsdlState0),
+  {reply, Result, S#{dsdl_state := DsdlState}};
 handle_call(get_bloom, _From, #{ds_name := Name, dsdl_state := DsdlState,
                                 get := Get} = S) ->
   FalseProbability = misc:get_ds_config(Name, bloom_false_probability),

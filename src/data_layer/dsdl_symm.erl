@@ -9,27 +9,27 @@ new(Node, N, P, B) ->
         a -> L1;
         b -> L2
       end,
-  {{dict:from_list(L), Expected}, fun prep/1, fun get/1, fun get_vals/2,
+  {{dict:from_list(L), Expected, false}, fun prep/1, fun get/1, fun get_vals/2,
    fun put/2, fun unprep/1}.
 
 %%%_* Internal =========================================================
-prep(State = {Dict, _}) -> {size(dict:to_list(Dict), 0), State}.
+prep(State = {_Dict, _Expected, true}) ->
+  {error_sync_in_progress, State};
+prep(_State = {Dict, Expected, false}) ->
+  {{ok, misc:lsize(dict:to_list(Dict))}, {Dict, Expected, true}}.
 
-get(_State = {Dict, _}) -> dict:to_list(Dict).
+get(_State = {Dict, _Expected, true}) -> dict:to_list(Dict).
 
 get_vals(State, L) -> {L, State}.
 
-put(_State = {Dict, Expected}, {K, V1}) ->
+put(_State = {Dict, Expected, true}, {K, V1}) ->
   case dict:find(K, Dict) of
-    error    -> {dict:store(K, V1, Dict), Expected};
-    {ok, V2} -> {dict:store(K, resolve(V1, V2), Dict), Expected}
+    error    -> {dict:store(K, V1, Dict), Expected, true};
+    {ok, V2} -> {dict:store(K, resolve(V1, V2), Dict), Expected, true}
   end.
 
 resolve(V1, V2) -> max(V1, V2).
 
-unprep(State = {Dict, Expected}) ->
+unprep(_State = {Dict, Expected, _Prepped}) ->
   symmetric_dataset:verify(dict:to_list(Dict), Expected),
-  State.
-
-size([], Size)      -> Size;
-size([H | T], Size) -> size(T, Size + byte_size(term_to_binary(H))).
+  {Dict, Expected, false}.

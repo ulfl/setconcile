@@ -12,9 +12,10 @@
 -export([delete/3]).
 
 connect(Ip) ->
-  {ok, Pid} = riakc_pb_socket:start(Ip, 8087, [{connect_timeout, 5000},
-                                               {queue_if_disconnected, false},
-                                               {auto_reconnect, false}]),
+  {ok, Pid} = riakc_pb_socket:start_link(Ip, 8087,
+                                         [{connect_timeout, 5000},
+                                          {queue_if_disconnected, false},
+                                          {auto_reconnect, false}]),
   Pid.
 
 disconnect(Pid) -> ok = riakc_pb_socket:stop(Pid).

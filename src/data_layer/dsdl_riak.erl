@@ -28,7 +28,16 @@ new(DbIp, Bucket, Resolver, MapFunStr) ->
 %%%_* Internal =========================================================
 
 %% Prepare to start syncing.
-prep(#state{ip=Ip, bucket=Bucket, map_fun_str=MapFunStr}=State) ->
+prep(#state{pid=Pid, key_vals=KeyVals}=State0) ->
+  case {Pid, KeyVals} of
+    {no_pid, no_keys} ->
+      {Size, State} = do_prep(State0),
+      {{ok, Size}, State};
+    {_, _} when is_pid(Pid) and is_tuple(KeyVals) ->
+      {error_sync_in_progress, State0}
+  end.
+
+do_prep(#state{ip=Ip, bucket=Bucket, map_fun_str=MapFunStr}=State) ->
   Pid = riak_ops:connect(Ip),
   DoPrep = fun() ->
                KeyValsSize = map(Pid, Bucket, MapFunStr),

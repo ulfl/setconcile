@@ -6,6 +6,7 @@
 -export([get_ds_config/2]).
 -export([foreach_ds_config/1]).
 -export([make_counter/0]).
+-export([lsize/1]).
 
 local_dataset(DsName) -> get_ds_config(DsName, dataset).
 
@@ -46,3 +47,9 @@ make_counter() ->
         {Ref, Cnt} -> Cnt
       end
   end.
+
+%% Byte size of list.
+lsize(L) -> lsize(L, 0).
+
+lsize([], Size)      -> Size;
+lsize([H | T], Size) -> lsize(T, Size + byte_size(term_to_binary(H))).

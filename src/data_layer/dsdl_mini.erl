@@ -13,7 +13,7 @@ new(Node) ->
    fun put/2, fun unprep/1}.
 
 %%%_* Internal =========================================================
-prep(Dict) -> {size(dict:to_list(Dict), 0), Dict}.
+prep(Dict) -> {{ok, misc:lsize(dict:to_list(Dict))}, Dict}.
 
 get(Dict) -> dict:to_list(Dict).
 
@@ -43,6 +43,3 @@ verify(L) ->
     true -> lager:info("Correct!~n", []);
     false -> lager:info("INCORRECT!~n", [])
   end.
-
-size([], Size)      -> Size;
-size([H | T], Size) -> size(T, Size + byte_size(term_to_binary(H))).
