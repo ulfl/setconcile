@@ -105,7 +105,7 @@ get(Ip, Bucket, Key) ->
 %% Contain dataset size in RAM by adding in bulk data just before the
 %% write.
 create_objects(Pid, Bucket, N, P, B) ->
-  {L1, L2, Expected} = symmetric_dataset:create(N, P, 0),
+  {L1, L2, _Expected} = symmetric_dataset:create(N, P, 0),
   L = case node_name() of
         a -> L1;
         b -> L2
