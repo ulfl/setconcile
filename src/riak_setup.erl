@@ -101,15 +101,20 @@ get(Ip, Bucket, Key) ->
   V.
 
 %%%_* Internal =========================================================
+
+%% Contain dataset size in RAM by adding in bulk data just before the
+%% write.
 create_objects(Pid, Bucket, N, P, B) ->
-  {L1, L2, Expected} = symmetric_dataset:create(N, P, B),
+  {L1, L2, Expected} = symmetric_dataset:create(N, P, 0),
   L = case node_name() of
         a -> L1;
         b -> L2
       end,
   Resolve = fun(_, _) -> error(existing_object) end,
-  [riak_ops:put(Pid, Bucket, Key, Value, Resolve) || {Key, Value} <- L],
-  Expected.
+  Bits = B * 8,
+  Bulk = <<0:Bits>>,
+  [riak_ops:put(Pid, Bucket, Key, {T, Bulk}, Resolve) || {Key, {T, _B}} <- L],
+  ok.
 
 create_objects_onesided(Pid, Bucket, N, B) ->
   L = symmetric_dataset:create_onesided(N, B),
