@@ -177,7 +177,7 @@
 (define (quick2) (test/log 400 0.1 16 (in-range 0.001 0.9 0.1) 1))
 
 (define (all)
-  (for ((p (in-list (list 0.01))))
+  (for ((p (in-list (list 0.001))))
     (dbg "Testing with p=~a" p)
     (sleep 1)
     (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.5
