@@ -9,16 +9,19 @@ new(Node, N, P, B) ->
         a -> L1;
         b -> L2
       end,
-  {{dict:from_list(L), Expected, false}, fun prep/1, fun get/1, fun get_vals/2,
-   fun put/2, fun unprep/1}.
+  {{dict:from_list(L), Expected, false}, fun prep/2, fun count/1, fun fold/3,
+   fun get_vals/2, fun put/2, fun unprep/1}.
 
 %%%_* Internal =========================================================
-prep(State = {_Dict, _Expected, true}) ->
+prep(State = {_Dict, _Expected, true}, _Tmo) ->
   {error_sync_in_progress, State};
-prep(_State = {Dict, Expected, false}) ->
+prep(_State = {Dict, Expected, false}, _Tmo) ->
   {{ok, misc:lsize(dict:to_list(Dict))}, {Dict, Expected, true}}.
 
-get(_State = {Dict, _Expected, true}) -> dict:to_list(Dict).
+count(_State = {Dict, _Expected, true}) -> dict:size(Dict).
+
+fold(_State = {Dict, _Expected, true}, Fun, State) ->
+  dict:fold(fun(K, V, S) -> Fun({K, V}, S) end, State, Dict).
 
 get_vals(State, L) -> {L, State}.
 

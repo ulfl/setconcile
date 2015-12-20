@@ -9,13 +9,16 @@ new(Node) ->
         a -> L1;
         b -> L2
       end,
-  {dict:from_list(L), fun prep/1, fun get/1, fun get_vals/2,
+  {dict:from_list(L), fun prep/2, fun count/1, fun fold/3, fun get_vals/2,
    fun put/2, fun unprep/1}.
 
 %%%_* Internal =========================================================
-prep(Dict) -> {{ok, misc:lsize(dict:to_list(Dict))}, Dict}.
+prep(Dict, _Tmo) -> {{ok, misc:lsize(dict:to_list(Dict))}, Dict}.
 
-get(Dict) -> dict:to_list(Dict).
+count(Dict) -> dict:size(Dict).
+
+fold(Dict, Fun, State) -> dict:fold(fun(K, V, S) -> Fun({K, V}, S) end, State,
+                                    Dict).
 
 get_vals(Dict, L) -> {L, Dict}.
 

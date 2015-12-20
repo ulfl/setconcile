@@ -2,8 +2,9 @@
 -module(reconcile).
 
 -export([reconcile/1]).
--export([create_bloom/2]).
--export([filter/3]).
+-export([bloom_create/2]).
+-export([bloom_insert/2]).
+-export([bloom_contains/2]).
 
 reconcile(DsName) ->
   LocalDs = misc:local_dataset(DsName),
@@ -39,10 +40,10 @@ reconcile_and_print_stats(DsName, LocalDs, LocalDsSize, RemoteDs, PrepTime) ->
     #{data_size := DataSize, bloom_size := BloomSize, tx_cnt := TxCnt,
       rx_cnt := RxCnt} = Stats,
     lager:info("Reconciliation done (dataset=~p, time_s=~.2f, its=~p, "
-               "data_size=~.2f MB, bloom_size=~.2f MB, tx_cnt=~p, rx_cnt=~p).",
+               "data_size_mb=~.2f, bloom_size_mb=~.2f, tx_cnt=~p, rx_cnt=~p).",
                [DsName, sec(RecTime), Its, mb(DataSize), mb(BloomSize), TxCnt, 
                 RxCnt]),
-    lager:info("Size of local dataset (dataset=~p, dataset_size=~.2fMB).",
+    lager:info("Size of local dataset (dataset=~p, dataset_size_mb=~.2f).",
                [DsName, mb(LocalDsSize)]),
     lager:info("Ratio of transferred data to dataset size (dataset=~p, "
                "size_ratio=~.3f).", [DsName, (DataSize + BloomSize) /
@@ -84,34 +85,20 @@ transfer(DsName, SourceDs, DestDs, DestStr) ->
   {Dt2, {Cnt, Size}} =
     timer:tc(fun() -> ds:transfer_missing(SourceDs, Bloom, DestDs) end),
   lager:info("Transferred elements to ~s (dataset=~p, num_elements=~p, "
-             "total_size=~pB, time_s=~.2f).", [DestStr, DsName, Cnt, Size,
-                                               sec(Dt2)]),
+             "total_size_bytes=~p, time_s=~.2f).", [DestStr, DsName, Cnt, Size,
+                                                    sec(Dt2)]),
   {Bloom, Cnt, Size}.
 
-bloom_size(B) -> byte_size(ebloom:serialize(B)).
+bloom_create(Size, FalseProbability) when Size > 0 ->
+  {ok, B} = ebloom:new(Size, FalseProbability, random:uniform(10000000)),
+  B.
 
-create_bloom(L, FalseProbability) ->
-  N = max(1, length(L)), % Don't allow N to be zero.
-  {ok, B} = ebloom:new(N, FalseProbability, random:uniform(10000000)),
-  populate_bloom(L, B).
+bloom_size(Bloom) -> byte_size(ebloom:serialize(Bloom)).
 
-populate_bloom([], B) ->
-  B;
-populate_bloom([H | T], B) ->
-  ebloom:insert(B, term_to_binary(H)),
-  populate_bloom(T, B).
+bloom_insert(Bloom, Val) -> ebloom:insert(Bloom, term_to_binary(Val)).
 
-filter([], _B, Remainder)      -> Remainder;
-filter([H | T], B, Remainder)  ->
-  case ebloom:contains(B, term_to_binary(H)) of
-    true  -> filter(T, B, Remainder);
-    false -> filter(T, B, [H | Remainder])
-  end.
+bloom_contains(Bloom, Val) -> ebloom:contains(Bloom, term_to_binary(Val)).
 
 mb(X) -> X / (1024 * 1024).
 
 sec(T) -> T / (1000 * 1000).
-
-%%%_* Tests ============================================================
-
-%% test bloom populate, filter. Check performance. Check false probability.

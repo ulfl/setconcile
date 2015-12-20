@@ -13,28 +13,39 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
-new(Name, {DsdlState, Prep, Get, GetVals, Put, Unprep}) ->
-  {ok, Ds} = gen_server:start_link(?MODULE, [Name, DsdlState, Prep, Get, GetVals,
-                                             Put, Unprep], []),
+new(Name, {DsdlState, Prep, Count, Fold, GetVals, Put, Unprep}) ->
+  {ok, Ds} = gen_server:start_link(?MODULE, [Name, DsdlState, Prep, Count, Fold,
+                                             GetVals, Put, Unprep], []),
   Ds.
 
 %%%_* Gen server callbacks =============================================
-init([Name, DsdlState, Prep, Get, GetVals, Put, Unprep]) ->
-  {ok, #{ds_name => Name, dsdl_state => DsdlState, prep => Prep, get => Get,
-         get_vals => GetVals, put => Put, unprep => Unprep}}.
+init([Name, DsdlState, Prep, Count, Fold, GetVals, Put, Unprep]) ->
+  {ok, #{ds_name => Name, dsdl_state => DsdlState, prep => Prep, count => Count,
+         fold => Fold, get_vals => GetVals, put => Put, unprep => Unprep}}.
 
-handle_call(prep, _From, #{dsdl_state := DsdlState0, prep := Prep} = S) ->
-  {Result, DsdlState} = Prep(DsdlState0),
+handle_call(prep, _From, #{ds_name := Name, dsdl_state := DsdlState0,
+                           prep := Prep} = S) ->
+  Tmo = misc:get_ds_config(Name, tmo_prep),
+  {Result, DsdlState} = Prep(DsdlState0, Tmo),
   {reply, Result, S#{dsdl_state := DsdlState}};
 handle_call(get_bloom, _From, #{ds_name := Name, dsdl_state := DsdlState,
-                                get := Get} = S) ->
+                                count := Count, fold := Fold} = S) ->
   FalseProbability = misc:get_ds_config(Name, bloom_false_probability),
-  Bloom = reconcile:create_bloom(Get(DsdlState), FalseProbability),
+  Bloom = reconcile:bloom_create(Count(DsdlState), FalseProbability),
+  Fold(DsdlState, fun(X = {_K, _V}, state) ->
+                      reconcile:bloom_insert(Bloom, X),
+                      state
+                  end, state),
   {reply, {ok, Bloom}, S};
 handle_call({transfer_missing, Bloom, DestDs}, _From,
-            #{ds_name := Name, dsdl_state := DsdlState0, get := Get,
+            #{ds_name := Name, dsdl_state := DsdlState0, fold := Fold,
               get_vals := GetVals} = S) ->
-  L = reconcile:filter(Get(DsdlState0), Bloom, []),
+  L = Fold(DsdlState0, fun(X = {_K, _V}, L) ->
+                           case reconcile:bloom_contains(Bloom, X) of
+                             true  -> L;
+                             false -> [X | L]
+                           end
+                       end, []),
   MaxSize = misc:get_ds_config(Name, max_transfer_bundle),
   {Size, DsdlState} = foreach_bundle(fun(Bundle, {Size, Dsdl0}) ->
                                          {KeyVals, Dsdl} = GetVals(Dsdl0, Bundle),
@@ -48,11 +59,17 @@ handle_call({store_elements, L}, _From, #{dsdl_state := DsdlState0,
   {reply, {ok, byte_size(term_to_binary(L))}, S#{dsdl_state := DsdlState}};
 handle_call(unprep, _From, #{dsdl_state := DsdlState0, unprep := Unprep} = S) ->
   DsdlState = Unprep(DsdlState0),
+  timer:send_after(3000, self(), collect_garbage),
   {reply, ok, S#{dsdl_state := DsdlState}}.
 
 handle_cast(Msg, S) -> {stop, {unexpected_cast, Msg}, S}.
 
-handle_info(Msg, S) -> {stop, {unexpected_info, Msg}, S}.
+%% Collect garbage after dataset keyval references have been released.
+handle_info(collect_garbage, S) ->
+  erlang:garbage_collect(self()),
+  {noreply, S};
+handle_info(Msg, S)             ->
+  {stop, {unexpected_info, Msg}, S}.
 
 terminate(_Reason, _S) -> ok.
 
