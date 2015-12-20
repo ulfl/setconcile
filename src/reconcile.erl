@@ -23,10 +23,11 @@ reconcile(DsName) ->
     false ->
       {ok, LocalDsSize} = R1,
       lager:info("Prepping done (time_s=~.2f).", [sec(PrepTime)]),
-      reconcile_and_print_stats(DsName, LocalDs, LocalDsSize, RemoteDs,
-                                PrepTime),
+      Res = reconcile_and_print_stats(DsName, LocalDs, LocalDsSize, RemoteDs,
+                                      PrepTime),
       ds:unprep(LocalDs),
-      ds:unprep(RemoteDs);
+      ds:unprep(RemoteDs),
+      Res;
     true ->
       error("Sync attempt failed since a sync is already in progress.")
   end.
