@@ -90,8 +90,8 @@ transfer(DsName, SourceDs, DestDs, DestStr) ->
                                                     sec(Dt2)]),
   {Bloom, Cnt, Size}.
 
-bloom_create(Size, FalseProbability) when Size > 0 ->
-  {ok, B} = ebloom:new(Size, FalseProbability, random:uniform(10000000)),
+bloom_create(Size, FalseProbability) ->
+  {ok, B} = ebloom:new(1 + Size, FalseProbability, random:uniform(10000000)),
   B.
 
 bloom_size(Bloom) -> byte_size(ebloom:serialize(Bloom)).
