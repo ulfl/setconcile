@@ -114,16 +114,17 @@
          (prep-time (hash-ref response 'prep_time))
          (rec-time (hash-ref response 'rec_time))
          (transfer-ratio (exact->inexact (/ (+ bloom-size data-size) ds-size))))
-    (format "~a, ~a, ~a, ~a, ~a" (precision bloom-false-probability)
-            (precision transfer-ratio) bloom-size its
-            (precision (us->s rec-time)))))
+    (format "~a, ~a, ~a, ~a, ~a, ~a, ~a" (precision bloom-false-probability)
+            prep-time (precision transfer-ratio) bloom-size data-size its
+            (precision rec-time))))
 
 (define (us->s us) (exact->inexact (/ us (* 1000 1000))))
 (define (ms->s ms) (exact->inexact (/ ms 1000)))
 (define (precision x) (~r x #:precision '(= 3)))
 
 (define (test outf n p bulk (range #f) (samples 3))
-  (fprintf outf "false-probability, transfer-ratio, bloom-size, its, time~n")
+  (fprintf outf (string-append "false-probability, prep-time, transfer-ratio, "
+                               "bloom-size, data-size, its, time~n"))
   (for ((bloom-false-probability (or range (in-range 0.001 0.5 0.1))))
     (dbg " false-probability=~a" bloom-false-probability)
     (for ((tries (in-range 0 samples)))
@@ -180,8 +181,7 @@
   (for ((p (in-list (list 0.001))))
     (dbg "Testing with p=~a" p)
     (sleep 1)
-    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.5
-                                              0.6))))
+    (test/log 1000000 p 1024 (in-list '(0.001 0.1 0.2 0.3 0.4 0.5))))
   (beep))
 
 (define (pmap f xs)

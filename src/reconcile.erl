@@ -49,8 +49,8 @@ reconcile_and_print_stats(DsName, LocalDs, LocalDsSize, RemoteDs, PrepTime) ->
     lager:info("Ratio of transferred data to dataset size (dataset=~p, "
                "size_ratio=~.3f).", [DsName, (DataSize + BloomSize) /
                                        LocalDsSize]),
-    Stats#{its => Its, ds_size => LocalDsSize, prep_time => PrepTime,
-           rec_time => RecTime}
+    Stats#{its => Its, ds_size => LocalDsSize, prep_time => sec(PrepTime),
+           rec_time => sec(RecTime)}
   catch
     C:E -> lager:error("Error during reconciliation (error={~p, ~p}, stack=~p).",
                        [C, E, erlang:get_stacktrace()]),
