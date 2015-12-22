@@ -5,8 +5,10 @@ variable "key_file" {}
 variable "region" { }
 variable "amis" {
     default = {
-        eu-west-1 = "ami-71ce6302" # 7fe494a-1M-0.001-1024-nodea
-        us-east-1 = "ami-8784d3ed" # 7fe494a-1M-0.001-1024-nodeb
+        eu-west-1 = "ami-105df063" # a3addc1-1M-0.001-1024-nodea
+        us-east-1 = "ami-d0a5f3ba" # a3addc1-1M-0.001-1024-nodeb
+#        eu-west-1 = "ami-71ce6302" # 7fe494a-1M-0.001-1024-nodea
+#        us-east-1 = "ami-8784d3ed" # 7fe494a-1M-0.001-1024-nodeb
 #        eu-west-1 = "ami-7577d506" # dd9fe4a-10M-0.001-1024-nodea
 #        us-east-1 = "ami-a75b0fcd" # dd9fe4a-10M-0.001-1024-nodeb
 #        eu-west-1 = "ami-92401ce5" # ubuntu 14.04.3.
