@@ -5,12 +5,12 @@ variable "key_file" {}
 variable "region" { }
 variable "amis" {
     default = {
-        eu-west-1 = "ami-5104a922" # 1aea723-1M-0.001-1024-nodea
-        us-east-1 = "ami-6e025304" # 1aea723-1M-0.001-1024-nodeb
+#        eu-west-1 = "ami-5104a922" # 1aea723-1M-0.001-1024-nodea
+#        us-east-1 = "ami-6e025304" # 1aea723-1M-0.001-1024-nodeb
 #        eu-west-1 = "ami-105df063" # a3addc1-1M-0.001-1024-nodea
 #        us-east-1 = "ami-d0a5f3ba" # a3addc1-1M-0.001-1024-nodeb
-#        eu-west-1 = "ami-92401ce5" # ubuntu 14.04.3.
-#        us-east-1 = "ami-2dcf7b46" # ubuntu 14.04.3.
+        eu-west-1 = "ami-92401ce5" # ubuntu 14.04.3.
+        us-east-1 = "ami-2dcf7b46" # ubuntu 14.04.3.
     }
 }
 
@@ -40,10 +40,10 @@ resource "aws_instance" "replication_node" {
         destination = "riak.patch"
     }
 
-    # provisioner "remote-exec" {
-    #     connection {user = "ubuntu" key_file = "${var.key_file}"}
-    #     script = "${path.module}/setup.sh"
-    # }
+    provisioner "remote-exec" {
+        connection {user = "ubuntu" key_file = "${var.key_file}"}
+        script = "${path.module}/setup.sh"
+    }
 
     # Run separately so that the limits.conf changes are in affect.
     provisioner "remote-exec" {
