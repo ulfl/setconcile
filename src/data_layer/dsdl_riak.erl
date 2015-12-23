@@ -106,25 +106,52 @@ unprep(#state{pid=Pid}=State) ->
   State#state{pid=no_pid, key_vals=no_keys}.
 
 map(Pid, Bucket, MapFunStr) ->
+  {ReceiverPid, Result} = mapred_receiver(),
   {Time, Res} =
     timer:tc(
       fun() ->
-          riakc_pb_socket:mapred(Pid, Bucket, [{map, {strfun, MapFunStr}, "myarg",
-                                                true}], almost_infinity())
+          riakc_pb_socket:mapred_stream(
+            Pid, Bucket, [{map, {strfun, MapFunStr}, "myarg", true}],
+            ReceiverPid, almost_infinity()),
+          Result()
       end),
-  lager:info("MapReduce done. (bucket=~p, time_s=~.2f)", [Bucket,
-                                                          Time / (1000 * 1000)]),
+
+  lager:info("MapReduce done. (bucket=~p, time_s=~.2f)",
+             [Bucket, Time / (1000 * 1000)]),
+
   case Res of
-    {ok, [{0, X}]} -> X;
-    {ok, []} -> []
+    {ok, X} -> X
   end.
 
 almost_infinity() -> 7 * 24 * 3600 * 1000.
 
+mapred_receiver() ->
+  Loop =
+    fun Loop(working, State) ->
+        receive
+          {_Id, {mapred, 0, Res}} -> Loop(working, Res ++ State);
+          {_Id, done}             -> Loop(done, {ok, State});
+          {_Id, {error, Reason}}  -> Loop(done, {error, Reason})
+        end;
+        Loop(done, State) ->
+        receive
+          {get_result, Ref, Pid} -> Pid ! {Ref, State}
+        end
+    end,
+  Pid = spawn(fun() -> Loop(working, []) end),
+  F = fun() ->
+          Ref = make_ref(),
+          Pid ! {get_result, Ref, self()},
+          receive
+            {Ref, Result} -> Result
+          end
+      end,
+  {Pid, F}.
+
 default_map_fun() ->
   "fun({error, notfound}, _, _)   -> [];
       (Obj, _, _Arg) ->
-         case riak_object:get_values(Obj) of
+          case riak_object:get_values(Obj) of
             <<>>  ->
               [];
             [Val] ->
