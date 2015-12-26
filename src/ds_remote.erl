@@ -44,9 +44,13 @@ handle_call({transfer_missing, Bloom, _Dest}, _From,
 handle_call({store_elements, L}, _From,
             #{host := Host, port := Port, ds_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_transfer_elements),
-  Data = term_to_binary(L),
-  {ok, _} = http(post, Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
-  {reply, {ok, byte_size(Data)}, S};
+  case L of
+    [] -> {reply, {ok, 0}, S};
+    _  ->
+      Data = term_to_binary(L),
+      {ok, _} = http(post, Host, Port, fmt("/api/datasets/~p/", [Name]), Data, Tmo),
+      {reply, {ok, byte_size(Data)}, S}
+  end;
 handle_call(unprep, _From, #{host := Host, port := Port,
                              ds_name := Name} = S) ->
   Tmo = misc:get_ds_config(Name, tmo_unprep),

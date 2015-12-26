@@ -40,20 +40,10 @@ prep(#state{pid=Pid, key_vals=KeyVals}=State0, _) ->
 
 do_prep(#state{ip=Ip, bucket=Bucket, map_fun_str=MapFunStr}=State) ->
   Pid = riak_ops:connect(Ip),
-  DoPrep = fun() ->
-               KeyValsSize = map(Pid, Bucket, MapFunStr),
-               {L, Size} = lists:foldl(
-                             fun({Key, Size, Val}, {KeyVals, TotalSize}) ->
-                                 {[{Key, Val} | KeyVals], Size + TotalSize}
-                             end, {[], 0}, KeyValsSize),
-               KeyVals = lists:foldl(fun({K,V}, Tree) ->
-                                         gb_trees:insert(K, V, Tree)
-                                     end, gb_trees:empty(), L),
-               {KeyVals, Size}
-           end,
-  {Dt, {KeyVals, Size}} = timer:tc(fun() -> DoPrep() end),
-  lager:info("Prep done (num_elements=~p, size=~p, prep_time_s=~p).",
-             [gb_trees:size(KeyVals), Size, Dt / (1000 * 1000)]),
+  {T, {ok, {KeyVals, Size}}} =
+    timer:tc(fun() -> get_riak_data(Pid, Bucket, MapFunStr) end),
+  lager:info("Prep done (num_elements=~p, size_bytes=~p, prep_time_s=~p).",
+             [gb_trees:size(KeyVals), Size, sec(T)]),
   {Size, State#state{pid=Pid, key_vals=KeyVals}}.
 
 count(#state{key_vals=KeyVals}) -> gb_trees:size(KeyVals).
@@ -105,48 +95,32 @@ unprep(#state{pid=Pid}=State) ->
   riak_ops:disconnect(Pid),
   State#state{pid=no_pid, key_vals=no_keys}.
 
-map(Pid, Bucket, MapFunStr) ->
-  {ReceiverPid, Result} = mapred_receiver(),
-  {Time, Res} =
-    timer:tc(
-      fun() ->
-          riakc_pb_socket:mapred_stream(
-            Pid, Bucket, [{map, {strfun, MapFunStr}, "myarg", true}],
-            ReceiverPid, almost_infinity()),
-          Result()
-      end),
-
-  lager:info("MapReduce done. (bucket=~p, time_s=~.2f)",
-             [Bucket, Time / (1000 * 1000)]),
-
-  case Res of
-    {ok, X} -> X
-  end.
+get_riak_data(Pid, Bucket, MapFunStr) ->
+  Parent = self(),
+  spawn_link(
+    fun() ->
+        {ok, _Id} = riakc_pb_socket:mapred_stream(Pid, Bucket,
+                                                  [{map, {strfun, MapFunStr},
+                                                    "myarg", true}],
+                                                  Parent, almost_infinity())
+    end),
+  {T, Res} = timer:tc(fun() -> mapred_receiver(0, gb_trees:empty()) end),
+  lager:info("MapReduce done. (bucket=~p, time_s=~.2f)", [Bucket, sec(T)]),
+  Res.
 
 almost_infinity() -> 7 * 24 * 3600 * 1000.
 
-mapred_receiver() ->
-  Loop =
-    fun Loop(working, State) ->
-        receive
-          {_Id, {mapred, 0, Res}} -> Loop(working, Res ++ State);
-          {_Id, done}             -> Loop(done, {ok, State});
-          {_Id, {error, Reason}}  -> Loop(done, {error, Reason})
-        end;
-        Loop(done, State) ->
-        receive
-          {get_result, Ref, Pid} -> Pid ! {Ref, State}
-        end
-    end,
-  Pid = spawn(fun() -> Loop(working, []) end),
-  F = fun() ->
-          Ref = make_ref(),
-          Pid ! {get_result, Ref, self()},
-          receive
-            {Ref, Result} -> Result
-          end
-      end,
-  {Pid, F}.
+mapred_receiver(Size, Tree) ->
+  receive
+    {_Id, {mapred, 0, Res}} ->
+      {Tree1, ObjSize} = lists:foldl(fun({Key, ObjSize, Hash}, {T, S}) ->
+                                         {gb_trees:insert(Key, Hash, T),
+                                          S + ObjSize}
+                                     end, {Tree, 0}, Res),
+      mapred_receiver(Size + ObjSize, Tree1);
+    {_Id, done}            -> {ok, {Tree, Size}};
+    {_Id, {error, Reason}} -> {error, Reason}
+  end.
 
 default_map_fun() ->
   "fun({error, notfound}, _, _)   -> [];
@@ -160,3 +134,5 @@ default_map_fun() ->
               []
           end
    end.".
+
+sec(T) -> T / (1000 * 1000).
