@@ -10,7 +10,8 @@ title <- args[2]
 
 data <- read.csv(file)
 
-prep <- ggplot(data, aes(x=false.probability, y=prep.time)) + geom_point(alpha = 0.5) + stat_smooth() + ylab("time (s)") + xlab("Bloom false probability") + ggtitle("Prep time")
+prep <- ggplot(data, aes(factor(""), prep.time)) + geom_boxplot() + coord_flip() + scale_x_discrete("") + ggtitle("Prep time") + ylab("Prep time (s)") + xlab("")
+
 sync <- ggplot(data, aes(x=false.probability, y=time)) + geom_point(alpha = 0.5) + stat_smooth() + ylab("time (s)") + xlab("Bloom false probability") + ggtitle("Sync time")
 
 bsize <- ggplot(data, aes(x=false.probability, y=bloom.size/(1024*1024))) + geom_point(alpha = 0.5) + stat_smooth() + ylab("Size (MB)") + xlab("Bloom false probability") + ggtitle("Bloom Size")
