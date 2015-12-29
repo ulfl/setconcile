@@ -10,6 +10,8 @@
 -export([keys/2]).
 -export([get/3]).
 -export([nuclear/0]).
+-export([mapred/0]).
+-export([mapred2/0]).
 
 %% i.e. riak_setup:symm("127.0.0.1", <<"set_a">>, 1000, 0.1, 2048).
 symm(Ip, Bucket, N, P, B) ->
@@ -99,6 +101,30 @@ get(Ip, Bucket, Key) ->
   V = riak_ops:get(Pid, Bucket, Key, fun(_, _) -> error(sibling) end),
   riak_ops:disconnect(Pid),
   V.
+
+mapred() ->
+  Pid = riak_ops:connect("127.0.0.1"),
+  {T, {ok, {_KeyVals, Size}}} =
+    timer:tc(fun() ->
+                 dsdl_riak:get_riak_data(Pid, <<"set_a">>,
+                                         dsdl_riak:default_map_fun())
+             end),
+  io:format("Mapreduce: time=~p, size=~p~n", [T / 1000 / 1000,
+                                              Size / 1024 / 1024]).
+
+mapred2() ->
+  Pid = riak_ops:connect("127.0.0.1"),
+  {T, {ok, {_KeyVals, Size}}} =
+    timer:tc(fun() ->
+                 dsdl_riak:get_riak_data(Pid, <<"set_a">>,
+                                         simple_map_fun())
+             end),
+  io:format("Mapreduce: time=~p, size=~p~n", [T / 1000 / 1000,
+                                              Size / 1024 / 1024]).
+simple_map_fun() ->
+  "fun({error, notfound}, _, _)   -> [];
+       (_Obj, _, _Arg) -> []
+   end.".
 
 %%%_* Internal =========================================================
 

@@ -4,6 +4,10 @@
 -export([new/3]).
 -export([new/4]).
 
+%% For perf tests.
+-export([get_riak_data/3]).
+-export([default_map_fun/0]).
+
 -record(state, {
           ip :: string(),
           bucket :: binary(),
